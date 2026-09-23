@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction
 from auth import (
     hash_password,
     verify_password,
@@ -36,6 +36,8 @@ from schemas import (
     RentalQuoteResponse,
     RentalAgreementCreateRequest,
     RentalAgreementResponse,
+    CheckoutPaymentRequest,
+    CheckoutPaymentResponse,
 )
 
 app = FastAPI(title="SHARENT Marketplace")
@@ -630,4 +632,107 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
         terms_version=agreement.terms_version,
         agreed_at=agreement.agreed_at,
         status=agreement.status
+    )
+
+
+import random
+
+@app.post("/api/checkout/pay", response_model=CheckoutPaymentResponse)
+def process_checkout_payment(payload: CheckoutPaymentRequest, db: Session = Depends(get_db)):
+    # 1. Fetch Rental Agreement
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == payload.agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+    if agreement.renter_id != payload.renter_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: Agreement belongs to another renter.")
+    if agreement.status == "confirmed":
+        raise HTTPException(status_code=400, detail="Payment for this rental agreement has already been processed.")
+
+    # 2. Validate Payment Details (Card Simulation)
+    clean_card = payload.card_number.replace(" ", "").replace("-", "")
+    if len(clean_card) < 13 or not clean_card.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid card number. Please provide a valid 13-19 digit card number.")
+    if len(payload.cvv) not in (3, 4) or not payload.cvv.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid CVV security code.")
+    if not payload.billing_zip.strip():
+        raise HTTPException(status_code=400, detail="Billing ZIP code is required.")
+
+    # Simulated decline rule: Card ending in 0000 simulates decline
+    if clean_card.endswith("0000"):
+        raise HTTPException(status_code=402, detail="Card was declined by issuing bank (insufficient funds / fraud trigger).")
+
+    card_last4 = clean_card[-4:]
+    amount_charged = round(agreement.base_rent + agreement.service_fee + agreement.insurance_fee, 2)
+    escrow_deposit_held = round(agreement.security_deposit, 2)
+    total_paid = agreement.total_amount
+
+    # 3. Generate secure Transaction Reference and 4-digit Handover Verification PIN
+    txn_code = f"TXN-{random.randint(10000000, 99999999)}"
+    handover_pin = f"{random.randint(1000, 9999)}"
+
+    # 4. Record Payment Transaction
+    transaction = PaymentTransaction(
+        agreement_id=agreement.id,
+        renter_id=agreement.renter_id,
+        transaction_code=txn_code,
+        payment_method=payload.payment_method,
+        card_last4=card_last4,
+        amount_charged=amount_charged,
+        escrow_deposit_held=escrow_deposit_held,
+        total_paid=total_paid,
+        payment_status="escrow_held",
+        handover_pin=handover_pin,
+        created_at=datetime.utcnow()
+    )
+    db.add(transaction)
+
+    # 5. Lock Dates on Item Availability Calendar
+    # Block out all days of the rental as 'booked'
+    cur_date = agreement.start_date
+    while cur_date < agreement.end_date:
+        existing_avail = db.query(ItemAvailability).filter(
+            ItemAvailability.item_id == agreement.item_id,
+            ItemAvailability.date == cur_date
+        ).first()
+
+        if existing_avail:
+            existing_avail.status = "booked"
+            existing_avail.reason = f"Rented (Agr #{agreement.id})"
+        else:
+            db.add(ItemAvailability(
+                item_id=agreement.item_id,
+                date=cur_date,
+                status="booked",
+                reason=f"Rented (Agr #{agreement.id})"
+            ))
+        cur_date += timedelta(days=1)
+
+    # 6. Update Agreement status
+    agreement.status = "confirmed"
+    db.commit()
+    db.refresh(transaction)
+
+    item = agreement.item
+    owner = item.owner if item else None
+    renter = agreement.renter
+    owner_name = f"{owner.first_name} {owner.last_name}" if owner else "Verified Owner"
+    renter_name = f"{renter.first_name} {renter.last_name}" if renter else "Verified Renter"
+
+    return CheckoutPaymentResponse(
+        id=transaction.id,
+        transaction_code=transaction.transaction_code,
+        agreement_code=f"SHR-AGR-{agreement.id:05d}",
+        item_title=item.title if item else "Rental Item",
+        owner_name=owner_name,
+        renter_name=renter_name,
+        start_date=agreement.start_date,
+        end_date=agreement.end_date,
+        total_days=agreement.total_days,
+        amount_charged=transaction.amount_charged,
+        escrow_deposit_held=transaction.escrow_deposit_held,
+        total_paid=transaction.total_paid,
+        card_last4=transaction.card_last4,
+        payment_status="Confirmed & Escrow Held",
+        handover_pin=transaction.handover_pin,
+        created_at=transaction.created_at
     )

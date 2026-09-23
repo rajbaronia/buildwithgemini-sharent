@@ -186,3 +186,32 @@ class RentalAgreementResponse(BaseModel):
     terms_version: str
     agreed_at: datetime
     status: str
+
+
+class CheckoutPaymentRequest(BaseModel):
+    agreement_id: int
+    renter_id: int
+    payment_method: str = 'credit_card'
+    card_number: str
+    exp_month: str
+    exp_year: str
+    cvv: str
+    billing_zip: str
+
+class CheckoutPaymentResponse(BaseModel):
+    id: int
+    transaction_code: str
+    agreement_code: str
+    item_title: str
+    owner_name: str
+    renter_name: str
+    start_date: date_type
+    end_date: date_type
+    total_days: int
+    amount_charged: float
+    escrow_deposit_held: float
+    total_paid: float
+    card_last4: str
+    payment_status: str
+    handover_pin: str
+    created_at: datetime

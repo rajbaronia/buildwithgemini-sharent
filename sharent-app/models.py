@@ -140,3 +140,23 @@ class RentalAgreement(Base):
     item = relationship('Item')
     renter = relationship('User', foreign_keys=[renter_id])
     owner = relationship('User', foreign_keys=[owner_id])
+
+
+class PaymentTransaction(Base):
+    __tablename__ = 'payment_transactions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    agreement_id = Column(Integer, ForeignKey('rental_agreements.id'), nullable=False)
+    renter_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    transaction_code = Column(String, unique=True, index=True, nullable=False)
+    payment_method = Column(String, default='credit_card')
+    card_last4 = Column(String, default='4242')
+    amount_charged = Column(Float, nullable=False)
+    escrow_deposit_held = Column(Float, nullable=False)
+    total_paid = Column(Float, nullable=False)
+    payment_status = Column(String, default='succeeded')  # succeeded, escrow_held, refunded
+    handover_pin = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    agreement = relationship('RentalAgreement')
+    renter = relationship('User')
