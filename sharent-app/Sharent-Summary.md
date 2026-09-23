@@ -3,8 +3,9 @@
 > **Document Name**: `Sharent-Summary.md`  
 > **Project**: SHARENT (Peer-to-Peer Rental Marketplace for Household Goods)  
 > **Tagline**: *"The Airbnb of Everything Else"*  
-> **Generated At**: September 23, 2026  
-> **Status**: Production-Ready Prototype (Modules 1–7 Implemented & 100% Tested)
+> **Last Updated**: September 23, 2026  
+> **GitHub Repository**: [https://github.com/rajbaronia/buildwithgemini-sharent](https://github.com/rajbaronia/buildwithgemini-sharent)  
+> **Status**: Production-Ready Prototype (Modules 1–9 Fully Implemented & 100% Tested)
 
 ---
 
@@ -15,7 +16,7 @@ To empower communities to **make money, save money, and save the environment** b
 
 ### Background & Value Proposition
 - **The Problem**: 80% of household products (power tools, carpet cleaners, lawn equipment, camping gear, party supplies, wedding apparel) are used fewer than 6 times per year. Significant consumer capital is locked in depreciating assets whose utility is rarely realized.
-- **The Solution**: SHARENT connects item Owners with local Renters seeking short-term usage fees instead of buying new, while mitigating transactional risks via security deposits, verified identity, dual-factor OTP, and equipment insurance protection.
+- **The Solution**: SHARENT connects item Owners with local Renters seeking short-term usage fees instead of buying new, while mitigating transactional risks via security deposits, verified identity, dual-factor OTP, equipment insurance protection, legally binding rental agreements, and escrow holds.
 
 ---
 
@@ -29,7 +30,7 @@ To empower communities to **make money, save money, and save the environment** b
 | **Frontend** | Responsive HTML5 / TailwindCSS / FontAwesome | Dynamic vanilla JS (zero external build tools required) |
 | **Authentication & Security** | Passlib (PBKDF2/bcrypt) + Dual-Channel OTP | Random 6-digit codes for Email and SMS with dispatch simulator |
 | **File Storage** | Local multi-part file uploads | `/config/Desktop/BuildWithGemini/sharent-app/static/uploads/` |
-| **Testing Framework** | Pytest + Starlette TestClient | 8 comprehensive test suites passing 100% |
+| **Testing Framework** | Pytest + Starlette TestClient | 10 comprehensive test suites passing 100% |
 | **Default Server Port** | `0.0.0.0:8000` | Run via `uvicorn main:app --host 0.0.0.0 --port 8000` |
 
 ---
@@ -37,26 +38,31 @@ To empower communities to **make money, save money, and save the environment** b
 ## 3. Architecture & Project File Structure
 
 ```
-/config/Desktop/BuildWithGemini/sharent-app/
-├── main.py                     # Main FastAPI app, routes, endpoints, static mounts
-├── models.py                   # SQLAlchemy ORM models (User, Item, ItemAvailability, SessionRole)
-├── schemas.py                  # Pydantic validation models (Requests & Responses)
-├── auth.py                     # Password hashing, dual OTP generation, dispatch simulator & verification
-├── templates/
-│   ├── register.html           # User registration with simulated Dual OTP modal
-│   ├── login.html              # 2FA User login (Username + Password + Email/SMS OTP)
-│   └── dashboard.html          # Unified Owner/Renter dashboard, List an Item modal, Airbnb calendar & Fee Quote
-├── static/
-│   └── uploads/                # Directory storing multi-photo listing uploads
-├── tests/
-│   ├── test_registration.py            # User registration & duplicate checks
-│   ├── test_login.py                   # Password validation & 2FA login
-│   ├── test_roles_and_items.py         # Role switching & item management
-│   ├── test_item_listing_advanced.py   # Multi-photo upload & duration limit validations
-│   ├── test_calendar_availability.py   # Airbnb calendar date blocking & range validations
-│   ├── test_item_activation_toggle.py  # Owner activation/deactivation show/hide lifecycle
-│   └── test_quote_api.py               # Renter charges itemization & fee breakdown calculations
-└── sharent.db                  # SQLite database file
+/config/Desktop/BuildWithGemini/
+├── Sharent-Summary.md                  # Comprehensive session summary (root copy)
+├── project_brief.md                    # Project brief & requirements specification
+└── sharent-app/
+    ├── Sharent-Summary.md              # Mirror copy of session summary
+    ├── main.py                         # FastAPI routes, endpoints, static mounts
+    ├── models.py                       # SQLAlchemy ORM models (User, Item, ItemAvailability, RentalAgreement, PaymentTransaction)
+    ├── schemas.py                      # Pydantic validation models (Requests & Responses)
+    ├── auth.py                         # Password hashing, dual OTP generation, dispatch simulator & verification
+    ├── templates/
+    │   ├── register.html               # User registration with simulated Dual OTP modal
+    │   ├── login.html                  # 2FA User login (Username + Password + Email/SMS OTP)
+    │   └── dashboard.html              # Unified Owner/Renter dashboard, List an Item, Calendar, Quote, Agreement & Checkout
+    ├── static/
+    │   └── uploads/                    # Directory storing multi-photo listing uploads
+    ├── test_registration.py            # User registration & duplicate checks
+    ├── test_login.py                   # Password validation & 2FA login
+    ├── test_roles_and_items.py         # Role switching & item management
+    ├── test_item_listing_advanced.py   # Multi-photo upload & duration limit validations
+    ├── test_calendar_availability.py   # Airbnb calendar date blocking & range validations
+    ├── test_item_activation_toggle.py  # Owner activation/deactivation show/hide lifecycle
+    ├── test_quote_api.py               # Renter charges itemization & fee breakdown calculations
+    ├── test_rental_agreement.py        # Legal terms & mandatory acknowledgment validation
+    ├── test_payment_checkout.py        # Card authorization, escrow deposit hold & Handover PIN
+    └── sharent.db                      # SQLite database file
 ```
 
 ---
@@ -121,7 +127,33 @@ To empower communities to **make money, save money, and save the environment** b
     3. **Equipment Protection / Insurance Fee**: `8% of base rent (min $3.00)` if owner marked insurance as required.
     4. **Refundable Escrow Security Deposit**: Highlighted in dedicated escrow card (`100% refunded when item is returned in agreed condition`).
     5. **Total Due Now**: Grand total of rental + fees + refundable deposit.
-  - Modal with **`← Back to Calendar`** and **`Confirm & Proceed to Agreement →`** buttons.
+  - Modal with **`← Back to Calendar`** and **`Review & Agree to Rental Terms →`** buttons.
+
+### Module 8: Rental Agreement Terms & Conditions (Mandatory Acknowledgment)
+- **Requirements**: Display legal terms and conditions of rental agreement to Renter. Renter must acknowledge reading and agree to them in order to proceed with transaction.
+- **Implementation**:
+  - Database model `RentalAgreement` storing: `item_id`, `renter_id`, `owner_id`, `start_date`, `end_date`, `daily_rate`, `base_rent`, `security_deposit`, `service_fee`, `insurance_fee`, `total_amount`, `agreed_at`, `status`.
+  - Endpoint `POST /api/rental-agreements`:
+    - Enforces 3 mandatory acknowledgment flags:
+      1. Safe operation & PPE compliance with manufacturer guidelines.
+      2. Security deposit return policy.
+      3. Acceptance of Master P2P Terms & Conditions.
+    - Generates unique agreement code (`SHR-AGR-XXXXX`) and timestamps execution.
+  - Modal `#agreement-modal` disables the proceed button until all 3 checkboxes are checked.
+
+### Module 9: Payment Processing & Escrow Deposit Hold
+- **Requirements**: Process immediate rental charges, place refundable security deposit in platform escrow vault, auto-lock booked dates, and generate digital receipt with 4-digit Handover PIN.
+- **Implementation**:
+  - Database model `PaymentTransaction`: `agreement_id`, `renter_id`, `transaction_code` (`TXN-XXXXXXXX`), `payment_method`, `card_last4`, `amount_charged`, `escrow_deposit_held`, `total_paid`, `payment_status`, `handover_pin`, `created_at`.
+  - Endpoint `POST /api/checkout/pay`:
+    - Validates card details (includes sandbox test cards and 0000 decline simulation).
+    - Records immediate charge (rent + platform fee + insurance) and dedicated escrow deposit hold.
+    - Automatically marks dates in `item_availability` as `booked` to prevent double-booking.
+    - Transitions `RentalAgreement` status from `pending_payment` to `confirmed`.
+    - Generates cryptographically secure 4-digit Handover Verification PIN.
+  - Modals:
+    - `#checkout-modal`: Itemized financial breakdown, test card pre-fill (`4242 4242 4242 4242`), and encrypted card inputs.
+    - `#receipt-modal`: Digital confirmation receipt with prominent 4-Digit Handover Verification PIN banner and print option.
 
 ---
 
@@ -138,11 +170,12 @@ For testing across devices, these accounts are pre-configured and verified in th
 
 ---
 
-## 6. How to Run & Verify on a New Machine
+## 6. How to Run & Verify on Any Machine
 
 ```bash
 # 1. Clone or copy the project directory
-cd /path/to/sharent-app
+git clone https://github.com/rajbaronia/buildwithgemini-sharent.git
+cd buildwithgemini-sharent/sharent-app
 
 # 2. Activate Python virtual environment (or recreate one with requirements)
 source .venv/bin/activate
@@ -151,7 +184,7 @@ pip install fastapi uvicorn sqlalchemy pydantic jinja2 python-multipart passlib 
 # 3. Start the FastAPI server
 uvicorn main:app --host 0.0.0.0 --port 8000
 
-# 4. In a separate terminal, run the full test suite
+# 4. In a separate terminal, run all 10 automated test suites
 pytest -v
 ```
 
@@ -159,53 +192,13 @@ pytest -v
 
 ## 7. Recommended Next Steps for Implementation
 
-When importing this project into another agent or continuing development on the next device, the recommended logical phases are:
+When continuing development on this or another device, the recommended logical phases are:
 
-1. **Module 8: Rental Agreement & Digital Signature Flow**
-   - When the Renter clicks *"Confirm & Proceed to Agreement"*, generate a standardized P2P Rental Agreement contract summarizing:
-     - Item condition report & photographic baseline.
-     - Agreed rental dates, late return fee policy ($X/day penalty).
-     - Security deposit refund terms and liability clauses.
-     - Digital acknowledgment / signature checkbox by Renter.
-2. **Module 9: Simulated Payment Processing & Escrow Hold**
-   - Simulated checkout module:
-     - Capture Renter card details (or test payment token).
-     - Place authorization hold on the Security Deposit.
-     - Move funds into a platform escrow balance until item return is verified.
-3. **Module 10: Pickup, Inspection & Return Verification**
-   - QR code or 4-digit Handover Code:
-     - Handover confirmation when Renter picks up the item from the Owner.
-     - Return inspection checklist: Owner confirms item received in good condition, which automatically triggers the security deposit refund release.
-4. **Module 11: Mutual Rating & Review System**
+1. **Module 10: Item Handover & Return Inspection Checklist**
+   - **Pickup / Handover**: Owner inputs the Renter's 4-digit PIN to confirm the physical exchange and item baseline condition.
+   - **Return & Inspection**: Owner marks item returned in clean condition, which automatically triggers the **100% Security Deposit Escrow Refund** back to the Renter.
+2. **Module 11: Mutual Rating & Review System**
    - Post-rental review prompt for both Owner and Renter (Item condition rating, communication rating, punctuality).
-5. **Module 12: Production Cloud Deployment (Cloud Run + PostgreSQL)**
+3. **Module 12: Production Cloud Deployment (Cloud Run + PostgreSQL)**
    - Transition SQLite to Cloud SQL PostgreSQL.
    - Deploy containerized FastAPI application to Google Cloud Run with custom domain.
-
----
-
-## 8. Module 8: Rental Agreement Terms & Conditions (Completed)
-- **Requirements**: Display legal terms and conditions of rental agreement to Renter. Renter must acknowledge reading and agree to them in order to proceed with transaction.
-- **Implementation**:
-  - `RentalAgreement` model recording legally binding contract: `item_id`, `renter_id`, `owner_id`, `start_date`, `end_date`, `daily_rate`, `base_rent`, `security_deposit`, `service_fee`, `insurance_fee`, `total_amount`, `agreed_at`, `status`.
-  - Endpoint `POST /api/rental-agreements` strictly enforces mandatory acknowledgment booleans (`accepted_terms`, `accepted_deposit_policy`, `accepted_safety_rules`) before creating agreement.
-  - UI Modal `#agreement-modal` features 5 core clauses (Operating compliance, Deposit escrow 100% refund, Late penalties, Damage & Insurance, Dispute mediation) with dynamic contract party info and interactive checkboxes.
-  - Button unlocks only when all 3 acknowledgments are checked.
-  - Tested 100% via `test_rental_agreement.py`.
-
----
-
-## 9. Module 9: Payment Processing & Escrow Deposit Hold (Completed)
-- **Requirements**: Secure checkout processing rental charges and holding refundable security deposit in platform escrow vault; lock booked dates; issue digital receipt with 4-digit handover PIN.
-- **Implementation**:
-  - `PaymentTransaction` model recording: `agreement_id`, `renter_id`, `transaction_code` (e.g. `TXN-XXXXXXXX`), `payment_method`, `card_last4`, `amount_charged`, `escrow_deposit_held`, `total_paid`, `payment_status`, `handover_pin`, `created_at`.
-  - Endpoint `POST /api/checkout/pay`:
-    - Validates card details (with sandbox test cards and 0000 decline simulation).
-    - Records immediate charge (rent + platform fee + insurance) and dedicated escrow deposit hold.
-    - Automatically locks reserved dates in `item_availability` as `booked` to prevent double-booking.
-    - Transitions `RentalAgreement` status from `pending_payment` to `confirmed`.
-    - Generates cryptographically random 4-digit Handover Verification PIN.
-  - UI Modals:
-    - `#checkout-modal`: Itemized breakdown of charges vs held deposit, 1-click test card prefill button, and encrypted card inputs.
-    - `#receipt-modal`: Digital confirmation receipt with prominent 4-Digit Handover Verification PIN banner and print receipt option.
-  - Tested 100% via `test_payment_checkout.py`. All 10 pytest test suites passing.
