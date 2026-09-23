@@ -160,3 +160,21 @@ class PaymentTransaction(Base):
 
     agreement = relationship('RentalAgreement')
     renter = relationship('User')
+
+
+class RentalHandoverInspection(Base):
+    __tablename__ = 'rental_handover_inspections'
+
+    id = Column(Integer, primary_key=True, index=True)
+    agreement_id = Column(Integer, ForeignKey('rental_agreements.id'), unique=True, nullable=False)
+    pickup_verified_at = Column(DateTime, nullable=True)
+    pickup_notes = Column(String, nullable=True)
+    return_verified_at = Column(DateTime, nullable=True)
+    condition_on_return = Column(String, nullable=True)  # like_new, good, damaged
+    all_accessories_returned = Column(Boolean, default=True)
+    cleaned_properly = Column(Boolean, default=True)
+    deposit_refund_status = Column(String, default='pending')  # pending, released, held_dispute
+    deposit_refunded_amount = Column(Float, default=0.0)
+    inspection_notes = Column(String, nullable=True)
+
+    agreement = relationship('RentalAgreement')

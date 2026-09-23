@@ -202,3 +202,19 @@ When continuing development on this or another device, the recommended logical p
 3. **Module 12: Production Cloud Deployment (Cloud Run + PostgreSQL)**
    - Transition SQLite to Cloud SQL PostgreSQL.
    - Deploy containerized FastAPI application to Google Cloud Run with custom domain.
+
+---
+
+## 10. Module 10: Item Handover PIN Verification & Return Inspection Checklist (Completed)
+- **Requirements**: Owner verifies Renter's 4-digit Handover PIN to release the item; Owner completes a multi-point return inspection checklist (condition, accessories, cleanliness); confirming satisfactory condition automatically triggers the **100% Security Deposit Escrow Refund** release to the Renter.
+- **Implementation**:
+  - `RentalHandoverInspection` model recording: `agreement_id`, `pickup_verified_at`, `pickup_notes`, `return_verified_at`, `condition_on_return` (`like_new`, `good`, `damaged`), `all_accessories_returned`, `cleaned_properly`, `deposit_refund_status`, `deposit_refunded_amount`, `inspection_notes`.
+  - Endpoints:
+    - `POST /api/rentals/verify-handover`: Validates owner authorization, checks 4-digit PIN against `payment_transactions.handover_pin`, transitions agreement to `active`.
+    - `POST /api/rentals/return-inspection`: Records return inspection checklist, triggers 100% escrow refund, and marks agreement `completed`.
+    - `GET /api/rentals/user/{user_id}`: Real-time rental feed filtered by role (Owner vs Renter).
+  - UI Modals & Sections:
+    - Dedicated **"My Rentals, Handovers & Returns"** section on dashboard.
+    - `#handover-verify-modal`: Owner enters Renter's 4-digit PIN.
+    - `#return-inspect-modal`: Return inspection checklist with 1-click escrow deposit release.
+  - Tested 100% via `test_handover_and_return.py`. All 11 test suites passing.

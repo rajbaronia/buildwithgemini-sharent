@@ -251,6 +251,31 @@
 
     </div>
 
+  
+    <!-- ==================== ACTIVE RENTALS & ACTIVITY SECTION ==================== -->
+    <div class="mt-8 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-handshake"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900">My Rentals, Handovers &amp; Returns</h2>
+            <p class="text-xs text-slate-500">Track active bookings, verify pickup PINs, and complete return inspections</p>
+          </div>
+        </div>
+        <button type="button" onclick="loadUserRentals()" class="text-xs font-bold text-brand-600 hover:text-brand-800 cursor-pointer">
+          <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
+        </button>
+      </div>
+
+      <div id="user-rentals-container" class="mt-4 space-y-3">
+        <div class="text-center py-6 text-slate-400 text-xs">
+          <i class="fa-solid fa-spinner fa-spin mr-1"></i> Loading rental activity...
+        </div>
+      </div>
+    </div>
+    
   </main>
 
   <!-- ==================== NEW ITEM MODAL (OWNER - MODULE 4) ==================== -->
@@ -425,6 +450,120 @@
   
   
   
+  
+  <!-- ==================== OWNER HANDOVER PIN VERIFICATION MODAL ==================== -->
+  <div id="handover-verify-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-slate-900">Verify Item Handover</h3>
+            <p class="text-xs text-slate-500">Confirm physical pickup with Renter's PIN</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeHandoverModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="event.preventDefault(); submitHandoverVerification();" class="mt-4 space-y-4">
+        <input type="hidden" id="hv-agreement-id">
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+          <div class="flex justify-between"><span class="text-slate-400">Agreement:</span> <strong id="hv-agr-code" class="font-mono text-brand-700"></strong></div>
+          <div class="flex justify-between"><span class="text-slate-400">Renter:</span> <strong id="hv-renter-name" class="text-slate-800"></strong></div>
+          <div class="flex justify-between"><span class="text-slate-400">Item:</span> <strong id="hv-item-title" class="text-slate-800"></strong></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Enter 4-Digit Handover PIN from Renter</label>
+          <input type="text" id="hv-pin-input" placeholder="••••" required maxlength="4" class="w-full text-center tracking-[0.4em] font-mono text-2xl py-3 rounded-2xl border-2 border-slate-200 focus:border-brand-500 focus:outline-none">
+          <p class="text-[11px] text-slate-400 mt-1">Ask the renter to show the 4-digit PIN on their confirmation receipt.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Pre-Rental Condition Notes (Optional)</label>
+          <textarea id="hv-notes" rows="2" placeholder="e.g. Full battery, included extra bits, clean..." class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div id="hv-error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold"></div>
+
+        <div class="flex items-center justify-between gap-3 pt-2">
+          <button type="button" onclick="closeHandoverModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer">Cancel</button>
+          <button type="submit" id="btn-submit-handover" class="flex-1 py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs cursor-pointer shadow-md shadow-brand-600/30">
+            Verify &amp; Release Item
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== OWNER RETURN INSPECTION MODAL ==================== -->
+  <div id="return-inspect-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-slate-900">Return Inspection Checklist</h3>
+            <p class="text-xs text-slate-500">Inspect item to release security deposit escrow</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeInspectionModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="event.preventDefault(); submitReturnInspection();" class="mt-4 space-y-4">
+        <input type="hidden" id="ri-agreement-id">
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+          <div class="flex justify-between"><span class="text-slate-400">Agreement:</span> <strong id="ri-agr-code" class="font-mono text-brand-700"></strong></div>
+          <div class="flex justify-between"><span class="text-slate-400">Renter:</span> <strong id="ri-renter-name" class="text-slate-800"></strong></div>
+          <div class="flex justify-between"><span class="text-slate-400">Item:</span> <strong id="ri-item-title" class="text-slate-800"></strong></div>
+          <div class="flex justify-between pt-1 border-t border-slate-200"><span class="text-amber-700 font-bold">Escrow Deposit Held:</span> <strong id="ri-deposit-held" class="font-mono text-amber-800"></strong></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Item Physical Condition on Return</label>
+          <select id="ri-condition" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium">
+            <option value="like_new">Like New / Excellent (Full Refund)</option>
+            <option value="good" selected>Good / Normal Minor Wear (Full Refund)</option>
+            <option value="damaged">Noticeable Damage / Missing Parts (Hold for Dispute)</option>
+          </select>
+        </div>
+
+        <div class="space-y-2 pt-1">
+          <label class="flex items-start space-x-2 text-xs text-slate-700 cursor-pointer">
+            <input type="checkbox" id="ri-accessories" checked class="mt-0.5 rounded text-brand-600 focus:ring-brand-500">
+            <span>All accessories, cables, batteries, and cases have been returned.</span>
+          </label>
+          <label class="flex items-start space-x-2 text-xs text-slate-700 cursor-pointer">
+            <input type="checkbox" id="ri-cleaned" checked class="mt-0.5 rounded text-brand-600 focus:ring-brand-500">
+            <span>Item has been cleaned properly and is ready for the next renter.</span>
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Inspection Notes</label>
+          <textarea id="ri-notes" rows="2" placeholder="e.g. Returned in great working order..." class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div id="ri-error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold"></div>
+
+        <div class="flex items-center justify-between gap-3 pt-2">
+          <button type="button" onclick="closeInspectionModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer">Cancel</button>
+          <button type="submit" id="btn-submit-inspection" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs cursor-pointer shadow-md shadow-emerald-600/30">
+            Confirm &amp; Release Deposit
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ==================== CHECKOUT & PAYMENT MODAL ==================== -->
   <div id="checkout-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
@@ -1944,6 +2083,178 @@
         btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i><span>' + document.getElementById('btn-pay-text').innerText + '</span>';
       }
     }
+
+  
+    async function loadUserRentals() {
+      var container = document.getElementById('user-rentals-container');
+      if (!container) return;
+
+      try {
+        var res = await fetch('/api/rentals/user/' + currentUserId + '?role=' + currentRole);
+        var rentals = await res.json();
+
+        if (!rentals || rentals.length === 0) {
+          container.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs"><i class="fa-solid fa-box-open mr-1"></i> No active or past rentals found for this account.</div>';
+          return;
+        }
+
+        var out = '';
+        rentals.forEach(function(r) {
+          var statusBadge = '';
+          var actionBtn = '';
+
+          if (r.status === 'confirmed') {
+            statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800"><i class="fa-solid fa-clock mr-1"></i> Awaiting Pickup</span>';
+            if (currentRole === 'owner') {
+              actionBtn = '<button onclick="openHandoverModal(' + r.agreement_id + ', \'' + r.agreement_code + '\', \'' + r.renter_name.replace(/'/g, "\\'") + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-key mr-1"></i> Verify Handover</button>';
+            } else {
+              actionBtn = '<button onclick="alert(\'Your Pickup PIN is: ' + (r.handover_pin || 'Pending') + '\')" class="px-3 py-1.5 rounded-xl border border-brand-300 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-xs cursor-pointer"><i class="fa-solid fa-key mr-1"></i> Show PIN: ' + (r.handover_pin || '••••') + '</button>';
+            }
+          } else if (r.status === 'active') {
+            statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800"><i class="fa-solid fa-bolt mr-1"></i> Active Rental</span>';
+            if (currentRole === 'owner') {
+              actionBtn = '<button onclick="openInspectionModal(' + r.agreement_id + ', \'' + r.agreement_code + '\', \'' + r.renter_name.replace(/'/g, "\\'") + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\', ' + r.security_deposit + ')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-clipboard-check mr-1"></i> Inspect & Release Deposit</button>';
+            } else {
+              actionBtn = '<span class="text-xs text-slate-500 font-medium">Rental in progress (Return by ' + r.end_date + ')</span>';
+            }
+          } else if (r.status === 'completed') {
+            statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800"><i class="fa-solid fa-circle-check mr-1"></i> Completed &amp; Refunded</span>';
+            actionBtn = '<span class="text-xs text-emerald-700 font-bold"><i class="fa-solid fa-check mr-1"></i> Escrow Released ($' + r.security_deposit.toFixed(2) + ')</span>';
+          }
+
+          out += '<div class="p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white shadow-sm">';
+          out += '  <div>';
+          out += '    <div class="flex items-center space-x-2 mb-1">';
+          out += '      <strong class="font-mono text-xs text-brand-700">' + r.agreement_code + '</strong>';
+          out += '      ' + statusBadge;
+          out += '    </div>';
+          out += '    <h4 class="text-xs font-black text-slate-900">' + r.item_title + '</h4>';
+          out += '    <p class="text-[11px] text-slate-500 mt-0.5">' + (currentRole === 'owner' ? 'Renter: <strong>' + r.renter_name + '</strong>' : 'Owner: <strong>' + r.owner_name + '</strong>') + ' &bull; ' + r.start_date + ' to ' + r.end_date + ' (' + r.total_days + ' days) &bull; Total: $' + r.total_amount.toFixed(2) + ' (Deposit: $' + r.security_deposit.toFixed(2) + ')</p>';
+          out += '  </div>';
+          out += '  <div class="flex items-center space-x-2">';
+          out += '    ' + actionBtn;
+          out += '  </div>';
+          out += '</div>';
+        });
+
+        container.innerHTML = out;
+      } catch (e) {
+        container.innerHTML = '<div class="text-center py-4 text-rose-500 text-xs">Failed to load rentals.</div>';
+      }
+    }
+
+    function openHandoverModal(agrId, agrCode, renterName, itemTitle) {
+      document.getElementById('hv-agreement-id').value = agrId;
+      document.getElementById('hv-agr-code').innerText = agrCode;
+      document.getElementById('hv-renter-name').innerText = renterName;
+      document.getElementById('hv-item-title').innerText = itemTitle;
+      document.getElementById('hv-pin-input').value = '';
+      document.getElementById('hv-notes').value = '';
+      document.getElementById('hv-error-box').classList.add('hidden');
+      document.getElementById('handover-verify-modal').classList.remove('hidden');
+    }
+
+    function closeHandoverModal() {
+      document.getElementById('handover-verify-modal').classList.add('hidden');
+    }
+
+    async function submitHandoverVerification() {
+      var agrId = parseInt(document.getElementById('hv-agreement-id').value);
+      var pin = document.getElementById('hv-pin-input').value.trim();
+      var notes = document.getElementById('hv-notes').value.trim();
+      var btn = document.getElementById('btn-submit-handover');
+      var errBox = document.getElementById('hv-error-box');
+
+      try {
+        btn.disabled = true;
+        btn.innerText = 'Verifying PIN...';
+        errBox.classList.add('hidden');
+
+        var res = await fetch('/api/rentals/verify-handover', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            agreement_id: agrId,
+            owner_id: currentUserId,
+            entered_pin: pin,
+            pickup_notes: notes
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Handover verification failed');
+
+        alert(data.message);
+        closeHandoverModal();
+        loadUserRentals();
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Verify & Release Item';
+      }
+    }
+
+    function openInspectionModal(agrId, agrCode, renterName, itemTitle, depositHeld) {
+      document.getElementById('ri-agreement-id').value = agrId;
+      document.getElementById('ri-agr-code').innerText = agrCode;
+      document.getElementById('ri-renter-name').innerText = renterName;
+      document.getElementById('ri-item-title').innerText = itemTitle;
+      document.getElementById('ri-deposit-held').innerText = '$' + depositHeld.toFixed(2);
+      document.getElementById('ri-notes').value = '';
+      document.getElementById('ri-error-box').classList.add('hidden');
+      document.getElementById('return-inspect-modal').classList.remove('hidden');
+    }
+
+    function closeInspectionModal() {
+      document.getElementById('return-inspect-modal').classList.add('hidden');
+    }
+
+    async function submitReturnInspection() {
+      var agrId = parseInt(document.getElementById('ri-agreement-id').value);
+      var cond = document.getElementById('ri-condition').value;
+      var acc = document.getElementById('ri-accessories').checked;
+      var cleaned = document.getElementById('ri-cleaned').checked;
+      var notes = document.getElementById('ri-notes').value.trim();
+      var btn = document.getElementById('btn-submit-inspection');
+      var errBox = document.getElementById('ri-error-box');
+
+      try {
+        btn.disabled = true;
+        btn.innerText = 'Releasing Escrow...';
+        errBox.classList.add('hidden');
+
+        var res = await fetch('/api/rentals/return-inspection', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            agreement_id: agrId,
+            owner_id: currentUserId,
+            condition_on_return: cond,
+            all_accessories_returned: acc,
+            cleaned_properly: cleaned,
+            inspection_notes: notes
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Return inspection failed');
+
+        alert(data.message);
+        closeInspectionModal();
+        loadUserRentals();
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Confirm & Release Deposit';
+      }
+    }
+
+    // Call loadUserRentals on page load
+    setTimeout(loadUserRentals, 300);
 
   </script>
 </body>

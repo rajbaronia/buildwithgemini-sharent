@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection
 from auth import (
     hash_password,
     verify_password,
@@ -38,6 +38,9 @@ from schemas import (
     RentalAgreementResponse,
     CheckoutPaymentRequest,
     CheckoutPaymentResponse,
+    HandoverVerificationRequest,
+    ReturnInspectionRequest,
+    RentalSummaryItem,
 )
 
 app = FastAPI(title="SHARENT Marketplace")
@@ -736,3 +739,137 @@ def process_checkout_payment(payload: CheckoutPaymentRequest, db: Session = Depe
         handover_pin=transaction.handover_pin,
         created_at=transaction.created_at
     )
+
+
+@app.post("/api/rentals/verify-handover")
+def verify_item_handover(payload: HandoverVerificationRequest, db: Session = Depends(get_db)):
+    # 1. Fetch Agreement
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == payload.agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+
+    # 2. Check Owner authorization
+    if agreement.owner_id != payload.owner_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: Only the item owner can verify handover.")
+
+    if agreement.status != "confirmed":
+        raise HTTPException(status_code=400, detail=f"Cannot verify handover for agreement with status '{agreement.status}'. Must be 'confirmed'.")
+
+    # 3. Fetch Transaction & Verify PIN
+    txn = db.query(PaymentTransaction).filter(PaymentTransaction.agreement_id == agreement.id).first()
+    if not txn:
+        raise HTTPException(status_code=400, detail="No payment transaction found for this agreement.")
+
+    if payload.entered_pin.strip() != txn.handover_pin.strip():
+        raise HTTPException(status_code=400, detail="Invalid Handover PIN. Please check the 4-digit code provided by the renter.")
+
+    # 4. Record Handover
+    inspection = db.query(RentalHandoverInspection).filter(RentalHandoverInspection.agreement_id == agreement.id).first()
+    if not inspection:
+        inspection = RentalHandoverInspection(agreement_id=agreement.id)
+        db.add(inspection)
+
+    inspection.pickup_verified_at = datetime.utcnow()
+    inspection.pickup_notes = payload.pickup_notes
+    agreement.status = "active"  # Rental is now actively underway
+    db.commit()
+
+    return {
+        "message": "Handover verified successfully! Item is officially in the renter's possession.",
+        "agreement_code": f"SHR-AGR-{agreement.id:05d}",
+        "status": "active",
+        "pickup_verified_at": inspection.pickup_verified_at
+    }
+
+
+@app.post("/api/rentals/return-inspection")
+def complete_return_inspection(payload: ReturnInspectionRequest, db: Session = Depends(get_db)):
+    # 1. Fetch Agreement
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == payload.agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+
+    if agreement.owner_id != payload.owner_id:
+        raise HTTPException(status_code=403, detail="Unauthorized: Only the item owner can complete the return inspection.")
+
+    if agreement.status != "active":
+        raise HTTPException(status_code=400, detail=f"Cannot inspect return for agreement in status '{agreement.status}'. Must be 'active'.")
+
+    # 2. Fetch Handover Record & Payment Transaction
+    inspection = db.query(RentalHandoverInspection).filter(RentalHandoverInspection.agreement_id == agreement.id).first()
+    if not inspection:
+        inspection = RentalHandoverInspection(agreement_id=agreement.id)
+        db.add(inspection)
+
+    txn = db.query(PaymentTransaction).filter(PaymentTransaction.agreement_id == agreement.id).first()
+
+    # 3. Record Return Inspection Details
+    inspection.return_verified_at = datetime.utcnow()
+    inspection.condition_on_return = payload.condition_on_return
+    inspection.all_accessories_returned = payload.all_accessories_returned
+    inspection.cleaned_properly = payload.cleaned_properly
+    inspection.inspection_notes = payload.inspection_notes
+
+    # 4. Trigger Escrow Deposit Refund (100% refund when good / like_new)
+    if payload.condition_on_return in ["like_new", "good"] and payload.all_accessories_returned:
+        refund_amount = agreement.security_deposit
+        inspection.deposit_refund_status = "released"
+        inspection.deposit_refunded_amount = refund_amount
+        if txn:
+            txn.payment_status = "deposit_refunded"
+    else:
+        # Partial deduction or held for dispute mediation
+        refund_amount = round(max(0.0, agreement.security_deposit * 0.5), 2)
+        inspection.deposit_refund_status = "held_dispute"
+        inspection.deposit_refunded_amount = refund_amount
+
+    # 5. Mark Agreement Completed
+    agreement.status = "completed"
+    db.commit()
+
+    return {
+        "message": "Return inspection completed! Security deposit escrow has been released to the renter.",
+        "agreement_code": f"SHR-AGR-{agreement.id:05d}",
+        "status": "completed",
+        "deposit_refund_status": inspection.deposit_refund_status,
+        "deposit_refunded_amount": inspection.deposit_refunded_amount,
+        "return_verified_at": inspection.return_verified_at
+    }
+
+
+@app.get("/api/rentals/user/{user_id}")
+def get_user_rentals(user_id: int, role: str = "renter", db: Session = Depends(get_db)):
+    if role == "owner":
+        agreements = db.query(RentalAgreement).filter(RentalAgreement.owner_id == user_id).order_by(RentalAgreement.id.desc()).all()
+    else:
+        agreements = db.query(RentalAgreement).filter(RentalAgreement.renter_id == user_id).order_by(RentalAgreement.id.desc()).all()
+
+    results = []
+    for agr in agreements:
+        txn = db.query(PaymentTransaction).filter(PaymentTransaction.agreement_id == agr.id).first()
+        insp = db.query(RentalHandoverInspection).filter(RentalHandoverInspection.agreement_id == agr.id).first()
+        item = agr.item
+        owner = item.owner if item else None
+        renter = agr.renter
+
+        results.append({
+            "agreement_id": agr.id,
+            "agreement_code": f"SHR-AGR-{agr.id:05d}",
+            "item_id": agr.item_id,
+            "item_title": item.title if item else "Item",
+            "renter_id": agr.renter_id,
+            "renter_name": f"{renter.first_name} {renter.last_name}" if renter else "Renter",
+            "owner_id": agr.owner_id,
+            "owner_name": f"{owner.first_name} {owner.last_name}" if owner else "Owner",
+            "start_date": agr.start_date,
+            "end_date": agr.end_date,
+            "total_days": agr.total_days,
+            "total_amount": agr.total_amount,
+            "security_deposit": agr.security_deposit,
+            "status": agr.status,
+            "handover_pin": txn.handover_pin if txn else None,
+            "deposit_refund_status": insp.deposit_refund_status if insp else None,
+            "deposit_refunded_amount": insp.deposit_refunded_amount if insp else None
+        })
+
+    return results

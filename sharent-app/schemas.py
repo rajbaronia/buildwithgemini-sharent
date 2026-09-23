@@ -215,3 +215,37 @@ class CheckoutPaymentResponse(BaseModel):
     payment_status: str
     handover_pin: str
     created_at: datetime
+
+
+class HandoverVerificationRequest(BaseModel):
+    agreement_id: int
+    owner_id: int
+    entered_pin: str
+    pickup_notes: Optional[str] = None
+
+class ReturnInspectionRequest(BaseModel):
+    agreement_id: int
+    owner_id: int
+    condition_on_return: str = 'good'
+    all_accessories_returned: bool = True
+    cleaned_properly: bool = True
+    inspection_notes: Optional[str] = None
+
+class RentalSummaryItem(BaseModel):
+    agreement_id: int
+    agreement_code: str
+    item_id: int
+    item_title: str
+    renter_id: int
+    renter_name: str
+    owner_id: int
+    owner_name: str
+    start_date: date_type
+    end_date: date_type
+    total_days: int
+    total_amount: float
+    security_deposit: float
+    status: str
+    handover_pin: Optional[str] = None
+    deposit_refund_status: Optional[str] = None
+    deposit_refunded_amount: Optional[float] = None
