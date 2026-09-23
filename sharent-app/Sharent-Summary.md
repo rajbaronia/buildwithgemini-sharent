@@ -181,3 +181,14 @@ When importing this project into another agent or continuing development on the 
 5. **Module 12: Production Cloud Deployment (Cloud Run + PostgreSQL)**
    - Transition SQLite to Cloud SQL PostgreSQL.
    - Deploy containerized FastAPI application to Google Cloud Run with custom domain.
+
+---
+
+## 8. Module 8: Rental Agreement Terms & Conditions (Completed)
+- **Requirements**: Display legal terms and conditions of rental agreement to Renter. Renter must acknowledge reading and agree to them in order to proceed with transaction.
+- **Implementation**:
+  - `RentalAgreement` model recording legally binding contract: `item_id`, `renter_id`, `owner_id`, `start_date`, `end_date`, `daily_rate`, `base_rent`, `security_deposit`, `service_fee`, `insurance_fee`, `total_amount`, `agreed_at`, `status`.
+  - Endpoint `POST /api/rental-agreements` strictly enforces mandatory acknowledgment booleans (`accepted_terms`, `accepted_deposit_policy`, `accepted_safety_rules`) before creating agreement.
+  - UI Modal `#agreement-modal` features 5 core clauses (Operating compliance, Deposit escrow 100% refund, Late penalties, Damage & Insurance, Dispute mediation) with dynamic contract party info and interactive checkboxes.
+  - Button unlocks only when all 3 acknowledgments are checked.
+  - Tested 100% via `test_rental_agreement.py`.

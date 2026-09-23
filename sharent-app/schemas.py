@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, model_validator
 from typing import Optional, List
 
@@ -155,3 +156,33 @@ class RentalQuoteResponse(BaseModel):
     service_fee_total: float
     total_due_now: float
     refundable_deposit_portion: float
+
+
+class RentalAgreementCreateRequest(BaseModel):
+    item_id: int
+    renter_id: int
+    start_date: date_type
+    end_date: date_type
+    accepted_terms: bool
+    accepted_deposit_policy: bool
+    accepted_safety_rules: bool
+
+class RentalAgreementResponse(BaseModel):
+    id: int
+    agreement_code: str
+    item_id: int
+    item_title: str
+    owner_name: str
+    renter_name: str
+    start_date: date_type
+    end_date: date_type
+    total_days: int
+    daily_rate: float
+    base_rent: float
+    security_deposit: float
+    service_fee: float
+    insurance_fee: float
+    total_amount: float
+    terms_version: str
+    agreed_at: datetime
+    status: str

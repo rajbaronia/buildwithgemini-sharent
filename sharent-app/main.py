@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement
 from auth import (
     hash_password,
     verify_password,
@@ -34,6 +34,8 @@ from schemas import (
     CalendarRangeCheckRequest,
     CalendarRangeCheckResponse,
     RentalQuoteResponse,
+    RentalAgreementCreateRequest,
+    RentalAgreementResponse,
 )
 
 app = FastAPI(title="SHARENT Marketplace")
@@ -530,4 +532,102 @@ def get_rental_quote(item_id: int, payload: CalendarRangeCheckRequest, db: Sessi
         service_fee_total=service_fee_total,
         total_due_now=total_due_now,
         refundable_deposit_portion=security_deposit
+    )
+
+
+@app.post("/api/rental-agreements", response_model=RentalAgreementResponse)
+def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session = Depends(get_db)):
+    # 1. Enforce mandatory acknowledgments
+    if not (payload.accepted_terms and payload.accepted_deposit_policy and payload.accepted_safety_rules):
+        raise HTTPException(
+            status_code=400,
+            detail="You must acknowledge and accept all rental agreement terms, deposit conditions, and safety rules to proceed."
+        )
+
+    # 2. Verify Item exists & is available
+    item = db.query(Item).filter(Item.id == payload.item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found.")
+    if not item.is_available:
+        raise HTTPException(status_code=400, detail="This listing is currently deactivated.")
+    if item.owner_id == payload.renter_id:
+        raise HTTPException(status_code=400, detail="Owners cannot rent their own items.")
+
+    # 3. Verify Renter exists
+    renter = db.query(User).filter(User.id == payload.renter_id).first()
+    if not renter:
+        raise HTTPException(status_code=404, detail="Renter account not found.")
+
+    # 4. Verify Date Logic & Duration limits
+    if payload.end_date <= payload.start_date:
+        raise HTTPException(status_code=400, detail="Return date must be after start date.")
+
+    total_days = (payload.end_date - payload.start_date).days
+    if total_days < item.min_rental_days:
+        raise HTTPException(status_code=400, detail=f"Minimum rental duration is {item.min_rental_days} days.")
+    if total_days > item.max_rental_days:
+        raise HTTPException(status_code=400, detail=f"Maximum rental duration is {item.max_rental_days} days.")
+
+    # 5. Check date calendar conflicts
+    blocked = db.query(ItemAvailability).filter(
+        ItemAvailability.item_id == item.id,
+        ItemAvailability.date >= payload.start_date,
+        ItemAvailability.date < payload.end_date,
+        ItemAvailability.status.in_(["blocked", "booked"])
+    ).first()
+    if blocked:
+        raise HTTPException(status_code=400, detail=f"Selected date {blocked.date} is unavailable ({blocked.reason or blocked.status}).")
+
+    # 6. Calculate fee itemization
+    base_rent = round(total_days * item.base_rate_daily, 2)
+    service_fee = round(1.00 + (base_rent * 0.05), 2)
+    insurance_fee = round(max(3.00, base_rent * 0.08), 2) if item.insurance_required else 0.0
+    security_deposit = round(item.security_deposit, 2)
+    total_amount = round(base_rent + service_fee + insurance_fee + security_deposit, 2)
+
+    # 7. Create & Persist Agreement
+    agreement = RentalAgreement(
+        item_id=item.id,
+        renter_id=renter.id,
+        owner_id=item.owner_id,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        total_days=total_days,
+        daily_rate=item.base_rate_daily,
+        base_rent=base_rent,
+        security_deposit=security_deposit,
+        service_fee=service_fee,
+        insurance_fee=insurance_fee,
+        total_amount=total_amount,
+        terms_version="v1.0",
+        agreed_at=datetime.utcnow(),
+        status="pending_payment"
+    )
+    db.add(agreement)
+    db.commit()
+    db.refresh(agreement)
+
+    owner = item.owner
+    owner_name = f"{owner.first_name} {owner.last_name}" if owner else "Verified Owner"
+    renter_name = f"{renter.first_name} {renter.last_name}"
+
+    return RentalAgreementResponse(
+        id=agreement.id,
+        agreement_code=f"SHR-AGR-{agreement.id:05d}",
+        item_id=item.id,
+        item_title=item.title,
+        owner_name=owner_name,
+        renter_name=renter_name,
+        start_date=agreement.start_date,
+        end_date=agreement.end_date,
+        total_days=agreement.total_days,
+        daily_rate=agreement.daily_rate,
+        base_rent=agreement.base_rent,
+        security_deposit=agreement.security_deposit,
+        service_fee=agreement.service_fee,
+        insurance_fee=agreement.insurance_fee,
+        total_amount=agreement.total_amount,
+        terms_version=agreement.terms_version,
+        agreed_at=agreement.agreed_at,
+        status=agreement.status
     )

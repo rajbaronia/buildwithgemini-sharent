@@ -422,6 +422,145 @@
   </div>
 
   
+  
+  <!-- ==================== RENTAL AGREEMENT TERMS & CONDITIONS MODAL ==================== -->
+  <div id="agreement-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 rounded-2xl bg-brand-100 text-brand-800 flex items-center justify-center text-xl shadow-sm">
+            <i class="fa-solid fa-file-contract"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-slate-900">Peer-to-Peer Rental Agreement</h2>
+            <p class="text-xs text-slate-500">Standard Legal Terms, Operating Responsibilities &amp; Deposit Protection</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeAgreementModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Agreement Parties & Item Banner -->
+      <div class="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <div>
+          <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Rental Item</span>
+          <div id="agr-item-title" class="font-bold text-slate-800 text-sm mt-0.5"></div>
+          <div class="text-slate-500 mt-1">Owner: <strong id="agr-owner-name" class="text-slate-700"></strong></div>
+        </div>
+        <div class="sm:text-right">
+          <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Rental Period &amp; Escrow</span>
+          <div id="agr-dates" class="font-bold text-slate-800 mt-0.5"></div>
+          <div class="text-emerald-700 font-bold mt-1">Total Fee: <span id="agr-total-due"></span> (includes deposit)</div>
+        </div>
+      </div>
+
+      <!-- Scrollable Legal Terms Box -->
+      <div class="mt-4 p-4 rounded-2xl border border-slate-200 bg-slate-50/50 max-h-64 overflow-y-auto text-xs text-slate-600 space-y-3 leading-relaxed">
+        <div class="font-bold text-slate-800 border-b border-slate-200 pb-1.5 flex items-center justify-between">
+          <span>SHARENT Standard Master Rental Agreement (v1.0)</span>
+          <span class="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-mono">BINDING CONTRACT</span>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-800">1. Item Care, Safety &amp; Operating Compliance</h4>
+          <p class="mt-0.5 text-slate-600">The Renter agrees to operate the rented item strictly in compliance with the manufacturer’s operating manual, provided guides, and safety instructions. The Renter agrees to wear appropriate protective gear and refrain from sub-leasing, loaning, or utilizing the equipment for illegal or commercial purposes.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-800">2. Security Deposit Escrow &amp; Return Inspection</h4>
+          <p class="mt-0.5 text-slate-600">The refundable security deposit is held safely in SHARENT platform escrow. Upon returning the item to the Owner at the agreed return time in clean, functioning condition (ordinary wear-and-tear excepted), the deposit is released 100% back to the Renter within 24 hours of owner inspection.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-800">3. Timely Return &amp; Late Penalty Policy</h4>
+          <p class="mt-0.5 text-slate-600">The item must be returned by the agreed return date. Unapproved late returns are subject to a late fee equal to 1.5× the daily base rate for each 24-hour period beyond the scheduled reservation window.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-800">4. Accidental Damage, Loss &amp; Insurance Protection</h4>
+          <p class="mt-0.5 text-slate-600">If the item is covered under SHARENT Equipment Protection, repair costs resulting from accidental damage during regular usage are subsidized per platform policy. The Renter remains liable for intentional misuse, neglect, or loss up to the verified replacement value.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-800">5. Dispute Mediation &amp; Digital Acceptance</h4>
+          <p class="mt-0.5 text-slate-600">Both Owner and Renter agree to resolve any damage claims or discrepancies through the SHARENT Concierge Dispute Mediation system. Digital acknowledgment creates a legally binding peer-to-peer agreement between both parties.</p>
+        </div>
+      </div>
+
+      <!-- Mandatory Acknowledgment Checkboxes -->
+      <div class="mt-4 p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2.5">
+        <div class="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center">
+          <i class="fa-solid fa-signature mr-1.5 text-amber-700"></i>
+          <span>Mandatory Renter Acknowledgments</span>
+        </div>
+
+        <label class="flex items-start space-x-2.5 text-xs text-slate-800 cursor-pointer">
+          <input type="checkbox" id="chk-accept-safety" onchange="validateAgreementForm()" class="mt-0.5 w-4 h-4 accent-brand-600 rounded cursor-pointer">
+          <span>I acknowledge that I have read the operating guidelines, understand how to safely use this item, and will wear proper protective gear.</span>
+        </label>
+
+        <label class="flex items-start space-x-2.5 text-xs text-slate-800 cursor-pointer">
+          <input type="checkbox" id="chk-accept-deposit" onchange="validateAgreementForm()" class="mt-0.5 w-4 h-4 accent-brand-600 rounded cursor-pointer">
+          <span>I understand the security deposit policy and agree to return the item on time in the same clean, operational condition.</span>
+        </label>
+
+        <label class="flex items-start space-x-2.5 text-xs text-slate-800 cursor-pointer">
+          <input type="checkbox" id="chk-accept-terms" onchange="validateAgreementForm()" class="mt-0.5 w-4 h-4 accent-brand-600 rounded cursor-pointer">
+          <span><strong>I have read, understood, and legally agree to the SHARENT Peer-to-Peer Rental Agreement Terms &amp; Conditions.</strong></span>
+        </label>
+      </div>
+
+      <!-- Error feedback if any -->
+      <div id="agr-error-box" class="hidden mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold"></div>
+
+      <!-- Action Buttons -->
+      <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+        <button type="button" onclick="closeAgreementModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer">
+          <i class="fa-solid fa-arrow-left mr-1"></i> Back to Fee Summary
+        </button>
+        <button type="button" id="btn-submit-agreement" onclick="submitRentalAgreement()" disabled class="flex-1 px-6 py-2.5 rounded-xl bg-slate-300 text-slate-500 font-black text-xs transition flex items-center justify-center space-x-1.5 cursor-not-allowed">
+          <i class="fa-solid fa-lock mr-1"></i>
+          <span>Agree &amp; Proceed to Payment (Disabled)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Agreement Confirmation Success Toast Modal -->
+  <div id="agreement-success-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-center">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-4">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h3 class="text-xl font-black text-slate-900">Rental Agreement Executed!</h3>
+      <p class="text-xs text-slate-500 mt-1">Your rental terms have been digitally signed and recorded.</p>
+      
+      <div class="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs space-y-1.5">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Agreement ID:</span>
+          <strong id="suc-agr-code" class="font-mono text-brand-700"></strong>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Status:</span>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Pending Checkout</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Total Amount:</span>
+          <strong id="suc-agr-total" class="text-slate-900"></strong>
+        </div>
+      </div>
+
+      <button type="button" onclick="closeAgreementSuccessModal()" class="mt-6 w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition cursor-pointer">
+        <span>Proceed to Payment Checkout</span>
+        <i class="fa-solid fa-arrow-right ml-1"></i>
+      </button>
+    </div>
+  </div>
+
   <!-- ==================== RENTER CHARGES & ITEMIZATION MODAL ==================== -->
   <div id="quote-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
@@ -1457,6 +1596,91 @@
     function confirmRentalBooking() {
       alert('Rental Request for ' + currentQuoteData.item_title + ' (' + currentQuoteData.total_days + ' days) generated! Total Due: $' + currentQuoteData.total_due_now.toFixed(2) + ' (including $' + currentQuoteData.security_deposit.toFixed(2) + ' refundable deposit). Proceeding to Rental Agreement module...');
       document.getElementById('quote-modal').classList.add('hidden');
+    }
+
+  
+    function openAgreementModal() {
+      if (!currentQuoteData) return;
+
+      document.getElementById('agr-item-title').innerText = currentQuoteData.item_title;
+      document.getElementById('agr-owner-name').innerText = currentQuoteData.owner_name;
+      document.getElementById('agr-dates').innerText = currentQuoteData.start_date + ' to ' + currentQuoteData.end_date + ' (' + currentQuoteData.total_days + ' days)';
+      document.getElementById('agr-total-due').innerText = '$' + currentQuoteData.total_due_now.toFixed(2);
+
+      // Reset checkboxes
+      document.getElementById('chk-accept-safety').checked = false;
+      document.getElementById('chk-accept-deposit').checked = false;
+      document.getElementById('chk-accept-terms').checked = false;
+      validateAgreementForm();
+
+      document.getElementById('quote-modal').classList.add('hidden');
+      document.getElementById('agreement-modal').classList.remove('hidden');
+    }
+
+    function closeAgreementModal() {
+      document.getElementById('agreement-modal').classList.add('hidden');
+      document.getElementById('quote-modal').classList.remove('hidden');
+    }
+
+    function validateAgreementForm() {
+      var c1 = document.getElementById('chk-accept-safety').checked;
+      var c2 = document.getElementById('chk-accept-deposit').checked;
+      var c3 = document.getElementById('chk-accept-terms').checked;
+      var btn = document.getElementById('btn-submit-agreement');
+
+      if (c1 && c2 && c3) {
+        btn.disabled = false;
+        btn.className = 'flex-1 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-md shadow-brand-600/30 transition flex items-center justify-center space-x-1.5 cursor-pointer';
+        btn.innerHTML = '<i class="fa-solid fa-file-signature mr-1"></i><span>Acknowledge, Agree & Proceed to Payment</span>';
+      } else {
+        btn.disabled = true;
+        btn.className = 'flex-1 px-6 py-2.5 rounded-xl bg-slate-200 text-slate-400 font-black text-xs transition flex items-center justify-center space-x-1.5 cursor-not-allowed';
+        btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i><span>Agree & Proceed (Check all 3 boxes)</span>';
+      }
+    }
+
+    async function submitRentalAgreement() {
+      var btn = document.getElementById('btn-submit-agreement');
+      var errBox = document.getElementById('agr-error-box');
+      errBox.classList.add('hidden');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Recording Agreement...';
+
+        var res = await fetch('/api/rental-agreements', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            item_id: currentQuoteData.item_id,
+            renter_id: currentUserId,
+            start_date: currentQuoteData.start_date,
+            end_date: currentQuoteData.end_date,
+            accepted_terms: document.getElementById('chk-accept-terms').checked,
+            accepted_deposit_policy: document.getElementById('chk-accept-deposit').checked,
+            accepted_safety_rules: document.getElementById('chk-accept-safety').checked
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to submit agreement');
+
+        // Show Success Confirmation
+        document.getElementById('agreement-modal').classList.add('hidden');
+        document.getElementById('suc-agr-code').innerText = data.agreement_code;
+        document.getElementById('suc-agr-total').innerText = '$' + data.total_amount.toFixed(2);
+        document.getElementById('agreement-success-modal').classList.remove('hidden');
+
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+        validateAgreementForm();
+      }
+    }
+
+    function closeAgreementSuccessModal() {
+      document.getElementById('agreement-success-modal').classList.add('hidden');
+      alert('Rental Agreement executed successfully! Proceeding to Payment & Escrow Hold module...');
     }
 
   </script>

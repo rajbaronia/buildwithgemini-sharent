@@ -115,3 +115,28 @@ class ItemAvailability(Base):
     item = relationship("Item", backref="availabilities")
 
 Base.metadata.create_all(bind=engine)
+
+
+class RentalAgreement(Base):
+    __tablename__ = 'rental_agreements'
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey('items.id'), nullable=False)
+    renter_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    owner_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    total_days = Column(Integer, nullable=False)
+    daily_rate = Column(Float, nullable=False)
+    base_rent = Column(Float, nullable=False)
+    security_deposit = Column(Float, nullable=False)
+    service_fee = Column(Float, nullable=False)
+    insurance_fee = Column(Float, default=0.0)
+    total_amount = Column(Float, nullable=False)
+    terms_version = Column(String, default='v1.0')
+    agreed_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String, default='pending_payment')  # pending_payment, active, completed, cancelled
+
+    item = relationship('Item')
+    renter = relationship('User', foreign_keys=[renter_id])
+    owner = relationship('User', foreign_keys=[owner_id])
