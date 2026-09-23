@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHARENT - Secure User Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              900: '#14532d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans antialiased">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <i class="fa-solid fa-handshake-angle text-xl"></i>
+        </div>
+        <div>
+          <span class="text-2xl font-black tracking-tight bg-gradient-to-r from-brand-700 to-emerald-600 bg-clip-text text-transparent">SHARENT</span>
+          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full">P2P Marketplace</span>
+        </div>
+      </div>
+      <div class="text-sm text-slate-500">
+        Don't have an account? <a href="/" class="text-brand-600 font-semibold hover:underline ml-1">Register</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-md mx-auto px-4 py-12">
+    
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center text-xl mb-3 shadow-sm">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight sm:text-3xl">Welcome Back to SHARENT</h1>
+      <p class="mt-1 text-sm text-slate-500">Login with your credentials &amp; 2FA security OTP</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden">
+      
+      <!-- STEP 1: Username & Password -->
+      <div id="login-step-1" class="p-6 sm:p-8">
+        <form id="login-form" class="space-y-5">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Username</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-regular fa-user"></i></span>
+              <input type="text" id="username" required placeholder="Enter your username"
+                class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Password</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-key"></i></span>
+              <input type="password" id="password" required placeholder="Enter your password"
+                class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Send Security OTP via</label>
+            <div class="grid grid-cols-2 gap-3 mt-1">
+              <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center space-x-2.5 hover:bg-slate-50 transition channel-radio">
+                <input type="radio" name="otp_channel" value="email" checked class="accent-brand-600">
+                <span class="text-xs font-semibold text-slate-700 flex items-center">
+                  <i class="fa-regular fa-envelope mr-1.5 text-brand-600"></i> Email
+                </span>
+              </label>
+              <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center space-x-2.5 hover:bg-slate-50 transition channel-radio">
+                <input type="radio" name="otp_channel" value="phone" class="accent-brand-600">
+                <span class="text-xs font-semibold text-slate-700 flex items-center">
+                  <i class="fa-solid fa-mobile-screen mr-1.5 text-blue-600"></i> Phone (SMS)
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div id="login-error" class="hidden p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs"></div>
+
+          <button type="submit" id="btn-initiate"
+            class="w-full py-3.5 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-lg shadow-brand-600/25 transition duration-150 flex items-center justify-center space-x-2">
+            <span>Next: Send Security OTP</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- STEP 2: 2FA OTP Screen -->
+      <div id="login-step-2" class="hidden p-6 sm:p-8">
+        
+        <!-- Simulation notification box -->
+        <div class="mb-6 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+          <div class="flex items-start space-x-2.5">
+            <i class="fa-solid fa-flask text-amber-600 mt-0.5"></i>
+            <div>
+              <span class="font-bold">Simulated Security Dispatch:</span>
+              <div class="mt-1 font-mono">
+                Generated OTP: <span id="demo-login-otp" class="font-bold text-brand-700 text-sm ml-1">------</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center mb-6">
+          <h2 class="text-lg font-bold text-slate-900">Enter 2FA Code</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            We sent a 6-digit code to your <span id="channel-label" class="font-medium text-slate-700"></span> at:
+          </p>
+          <div id="target-destination" class="text-sm font-semibold text-slate-800 font-mono mt-0.5">...</div>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <input type="text" id="login-otp-input" maxlength="6" placeholder="000000"
+              class="w-full px-4 py-3 rounded-xl border border-slate-300 font-mono tracking-widest text-center text-xl font-bold focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+          </div>
+
+          <div id="otp-error" class="hidden p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs"></div>
+
+          <button onclick="submitLoginOTP()" id="btn-verify-otp"
+            class="w-full py-3.5 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-lg shadow-brand-600/25 transition duration-150 flex items-center justify-center space-x-2">
+            <span>Verify &amp; Sign In</span>
+            <i class="fa-solid fa-circle-check"></i>
+          </button>
+
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <button onclick="resendLoginCode()" class="hover:text-brand-700 underline">
+              Resend OTP
+            </button>
+            <button onclick="backToStep1()" class="hover:text-slate-800">
+              &larr; Switch channel / credentials
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    var currentUserId = null;
+    var activeChannel = 'email';
+
+    var loginForm = document.getElementById('login-form');
+    var loginError = document.getElementById('login-error');
+
+    loginForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      loginError.classList.add('hidden');
+      var btn = document.getElementById('btn-initiate');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
+
+      var channel = document.querySelector('input[name="otp_channel"]:checked').value;
+      activeChannel = channel;
+
+      var payload = {
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value,
+        preferred_channel: channel
+      };
+
+      try {
+        var res = await fetch('/api/login/initiate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        var data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Login failed');
+        }
+
+        currentUserId = data.user_id;
+        document.getElementById('demo-login-otp').innerText = data.demo_otp;
+        document.getElementById('channel-label').innerText = data.channel.toUpperCase();
+        document.getElementById('target-destination').innerText = data.masked_destination;
+
+        document.getElementById('login-step-1').classList.add('hidden');
+        document.getElementById('login-step-2').classList.remove('hidden');
+        document.getElementById('login-otp-input').focus();
+
+      } catch (err) {
+        loginError.innerText = err.message;
+        loginError.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Next: Send Security OTP</span> <i class="fa-solid fa-arrow-right"></i>';
+      }
+    });
+
+    async function submitLoginOTP() {
+      var input = document.getElementById('login-otp-input');
+      var errorDiv = document.getElementById('otp-error');
+      var btn = document.getElementById('btn-verify-otp');
+      errorDiv.classList.add('hidden');
+
+      var code = input.value.trim();
+      if (code.length !== 6) {
+        errorDiv.innerText = 'Please enter the complete 6-digit OTP code.';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Signing in...';
+
+      try {
+        var res = await fetch('/api/login/verify-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: currentUserId,
+            channel: activeChannel,
+            otp_code: code
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Verification failed');
+
+        window.location.href = '/dashboard/' + currentUserId;
+      } catch (err) {
+        errorDiv.innerText = err.message;
+        errorDiv.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<span>Verify &amp; Sign In</span> <i class="fa-solid fa-circle-check"></i>';
+      }
+    }
+
+    async function resendLoginCode() {
+      var errorDiv = document.getElementById('otp-error');
+      errorDiv.classList.add('hidden');
+
+      try {
+        var res = await fetch('/api/resend-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: currentUserId,
+            channel: activeChannel
+          })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Could not resend');
+
+        document.getElementById('demo-login-otp').innerText = data.demo_code;
+        errorDiv.className = 'p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs';
+        errorDiv.innerText = 'New OTP code generated: ' + data.demo_code;
+        errorDiv.classList.remove('hidden');
+      } catch (err) {
+        errorDiv.className = 'p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs';
+        errorDiv.innerText = err.message;
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function backToStep1() {
+      document.getElementById('login-step-2').classList.add('hidden');
+      document.getElementById('login-step-1').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

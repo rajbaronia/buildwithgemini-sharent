@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHARENT - Peer-to-Peer Rental Marketplace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              900: '#14532d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans antialiased">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <i class="fa-solid fa-handshake-angle text-xl"></i>
+        </div>
+        <div>
+          <span class="text-2xl font-black tracking-tight bg-gradient-to-r from-brand-700 to-emerald-600 bg-clip-text text-transparent">SHARENT</span>
+          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full">P2P Marketplace</span>
+        </div>
+      </div>
+      <div class="text-sm text-slate-500">
+        <span class="hidden md:inline">&ldquo;Why own when you can rent?&rdquo; &middot; </span>
+        <span class="font-medium text-slate-700 mr-3">Module 1: User Registration</span>
+        <a href="/login" class="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 font-semibold text-xs transition">
+          <i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Login
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-10">
+    <div class="mb-8 text-center">
+      <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight sm:text-4xl">
+        Join the SHARENT Community
+      </h1>
+      <p class="mt-2 text-base text-slate-600 max-w-2xl mx-auto">
+        Turn your unused household items into income, or rent power tools, appliances, and gear on-demand with verified trust and escrow protection.
+      </p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden">
+      <div class="grid grid-cols-2 border-b border-slate-100 bg-slate-50/60 p-4">
+        <div id="step-tab-1" class="flex items-center space-x-3 text-brand-700 font-bold border-b-2 border-brand-600 pb-2">
+          <span class="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs">1</span>
+          <span class="text-sm">Personal &amp; Account Info</span>
+        </div>
+        <div id="step-tab-2" class="flex items-center space-x-3 text-slate-400 font-semibold border-b-2 border-transparent pb-2 pl-4">
+          <span id="step-2-badge" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs">2</span>
+          <span class="text-sm">Email &amp; Phone OTP Verification</span>
+        </div>
+      </div>
+
+      <div id="step-1-container" class="p-6 sm:p-10">
+        <form id="registration-form" class="space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">First Name *</label>
+              <input type="text" id="first_name" required placeholder="John"
+                class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Last Name *</label>
+              <input type="text" id="last_name" required placeholder="Doe"
+                class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Email Address *</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-regular fa-envelope"></i></span>
+                <input type="email" id="email" required placeholder="john.doe@example.com"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone Number *</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-mobile-screen"></i></span>
+                <input type="tel" id="phone" required placeholder="+1 555-0199"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Residential Address *</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-location-dot"></i></span>
+              <input type="text" id="address" required placeholder="123 Market Street, San Ramon, CA 94583"
+                class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Unique Username *</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-regular fa-user"></i></span>
+                <input type="text" id="username" required placeholder="johndoe_p2p"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Password *</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-lock"></i></span>
+                <input type="password" id="password" required minlength="6" placeholder="Min 6 characters"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
+              </div>
+            </div>
+          </div>
+
+          <div id="form-error" class="hidden p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm"></div>
+
+          <button type="submit" id="submit-btn"
+            class="w-full py-3.5 px-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-base shadow-lg shadow-brand-600/25 transition duration-150 flex items-center justify-center space-x-2">
+            <span>Continue to OTP Verification</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+
+      <div id="step-2-container" class="hidden p-6 sm:p-10">
+        <div id="demo-notification" class="mb-8 p-4 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900">
+          <div class="flex items-start space-x-3">
+            <i class="fa-solid fa-flask text-amber-600 mt-1"></i>
+            <div class="flex-1 text-sm">
+              <span class="font-bold">Live Simulation Dispatcher:</span>
+              <p class="text-xs text-amber-800 mt-0.5">In production, these OTPs are dispatched via SMS gateway and SMTP. For testing, your generated codes are shown below:</p>
+              <div class="mt-2 flex flex-wrap gap-4 font-mono text-xs">
+                <div class="bg-white/80 px-3 py-1.5 rounded-md border border-amber-300">
+                  <span class="text-slate-600">Email OTP:</span> <span id="hint-email-code" class="font-bold text-brand-700 text-sm">------</span>
+                </div>
+                <div class="bg-white/80 px-3 py-1.5 rounded-md border border-amber-300">
+                  <span class="text-slate-600">Phone OTP:</span> <span id="hint-phone-code" class="font-bold text-brand-700 text-sm">------</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-8">
+          <div id="email-verification-card" class="p-5 rounded-xl border border-slate-200 bg-white shadow-sm transition">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <div id="email-icon" class="w-9 h-9 rounded-lg bg-emerald-100 text-brand-700 flex items-center justify-center">
+                  <i class="fa-regular fa-envelope"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-800 text-sm">Email Verification</h3>
+                  <p class="text-xs text-slate-500">Security code sent to <span id="display-email" class="font-semibold text-slate-700"></span></p>
+                </div>
+              </div>
+              <span id="email-badge" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                Pending
+              </span>
+            </div>
+
+            <div id="email-input-group" class="flex flex-col sm:flex-row gap-3 mt-4">
+              <input type="text" id="email-otp-input" maxlength="6" placeholder="Enter 6-digit code"
+                class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 font-mono tracking-widest text-center text-base focus:ring-2 focus:ring-brand-500 outline-none">
+              <button onclick="verifyCode('email')"
+                class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium text-sm transition">
+                Verify Email
+              </button>
+              <button onclick="resendCode('email')" class="text-xs text-slate-500 hover:text-brand-600 underline px-2 py-2.5">
+                Resend Code
+              </button>
+            </div>
+            <div id="email-status-msg" class="text-xs mt-2 hidden"></div>
+          </div>
+
+          <div id="phone-verification-card" class="p-5 rounded-xl border border-slate-200 bg-white shadow-sm transition">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <div id="phone-icon" class="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <i class="fa-solid fa-mobile-screen"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-800 text-sm">Phone Verification (SMS)</h3>
+                  <p class="text-xs text-slate-500">Security code sent to <span id="display-phone" class="font-semibold text-slate-700"></span></p>
+                </div>
+              </div>
+              <span id="phone-badge" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                Pending
+              </span>
+            </div>
+
+            <div id="phone-input-group" class="flex flex-col sm:flex-row gap-3 mt-4">
+              <input type="text" id="phone-otp-input" maxlength="6" placeholder="Enter 6-digit code"
+                class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 font-mono tracking-widest text-center text-base focus:ring-2 focus:ring-brand-500 outline-none">
+              <button onclick="verifyCode('phone')"
+                class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium text-sm transition">
+                Verify Phone
+              </button>
+              <button onclick="resendCode('phone')" class="text-xs text-slate-500 hover:text-brand-600 underline px-2 py-2.5">
+                Resend SMS
+              </button>
+            </div>
+            <div id="phone-status-msg" class="text-xs mt-2 hidden"></div>
+          </div>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-slate-200 flex flex-col items-center">
+          <p id="completion-notice" class="text-xs text-slate-500 mb-3">Both email and phone must be verified to complete registration.</p>
+          <button id="go-dashboard-btn" disabled onclick="redirectToDashboard()"
+            class="px-8 py-3 rounded-xl bg-slate-300 text-slate-500 font-semibold text-sm cursor-not-allowed transition flex items-center space-x-2">
+            <span>Proceed to SHARENT Dashboard</span>
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    var registeredUserId = null;
+    var isEmailDone = false;
+    var isPhoneDone = false;
+
+    var registrationForm = document.getElementById('registration-form');
+    var formError = document.getElementById('form-error');
+
+    registrationForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+      var submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
+
+      var payload = {
+        first_name: document.getElementById('first_name').value,
+        last_name: document.getElementById('last_name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        address: document.getElementById('address').value,
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value
+      };
+
+      try {
+        var res = await fetch('/api/register', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        var data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Registration failed');
+        }
+
+        registeredUserId = data.user_id;
+        document.getElementById('display-email').innerText = data.email;
+        document.getElementById('display-phone').innerText = data.phone;
+        document.getElementById('hint-email-code').innerText = data.demo_otps.email_code;
+        document.getElementById('hint-phone-code').innerText = data.demo_otps.phone_code;
+
+        document.getElementById('step-1-container').classList.add('hidden');
+        document.getElementById('step-2-container').classList.remove('hidden');
+
+        document.getElementById('step-tab-1').classList.remove('text-brand-700', 'border-brand-600');
+        document.getElementById('step-tab-1').classList.add('text-slate-400', 'border-transparent');
+        document.getElementById('step-tab-2').classList.remove('text-slate-400', 'border-transparent');
+        document.getElementById('step-tab-2').classList.add('text-brand-700', 'border-brand-600');
+        document.getElementById('step-2-badge').classList.remove('bg-slate-200', 'text-slate-600');
+        document.getElementById('step-2-badge').classList.add('bg-brand-600', 'text-white');
+
+      } catch (err) {
+        formError.innerText = err.message;
+        formError.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Continue to OTP Verification</span> <i class="fa-solid fa-arrow-right"></i>';
+      }
+    });
+
+    async function verifyCode(channel) {
+      var input = document.getElementById(channel + '-otp-input');
+      var msg = document.getElementById(channel + '-status-msg');
+      var code = input.value.trim();
+
+      if (code.length !== 6) {
+        msg.className = 'text-xs mt-2 text-rose-600';
+        msg.innerText = 'Please enter a valid 6-digit code.';
+        msg.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        var res = await fetch('/api/verify-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: registeredUserId,
+            channel: channel,
+            otp_code: code
+          })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Verification failed');
+
+        if (channel === 'email') isEmailDone = true;
+        if (channel === 'phone') isPhoneDone = true;
+
+        var badge = document.getElementById(channel + '-badge');
+        badge.className = 'px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800';
+        badge.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Verified';
+
+        document.getElementById(channel + '-input-group').classList.add('hidden');
+        msg.className = 'text-xs mt-2 text-emerald-600 font-medium';
+        msg.innerText = channel.toUpperCase() + ' successfully confirmed and locked.';
+        msg.classList.remove('hidden');
+
+        checkCompletion();
+      } catch (err) {
+        msg.className = 'text-xs mt-2 text-rose-600';
+        msg.innerText = err.message;
+        msg.classList.remove('hidden');
+      }
+    }
+
+    async function resendCode(channel) {
+      var msg = document.getElementById(channel + '-status-msg');
+      try {
+        var res = await fetch('/api/resend-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: registeredUserId,
+            channel: channel
+          })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Could not resend');
+
+        document.getElementById('hint-' + channel + '-code').innerText = data.demo_code;
+        msg.className = 'text-xs mt-2 text-amber-600';
+        msg.innerText = 'A new code was generated: ' + data.demo_code;
+        msg.classList.remove('hidden');
+      } catch (err) {
+        msg.className = 'text-xs mt-2 text-rose-600';
+        msg.innerText = err.message;
+        msg.classList.remove('hidden');
+      }
+    }
+
+    function checkCompletion() {
+      if (isEmailDone && isPhoneDone) {
+        var btn = document.getElementById('go-dashboard-btn');
+        btn.disabled = false;
+        btn.className = 'px-8 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition flex items-center space-x-2 cursor-pointer';
+        document.getElementById('completion-notice').className = 'text-xs text-emerald-600 font-semibold mb-3';
+        document.getElementById('completion-notice').innerText = 'Both Email and Phone are verified. Your account is active.';
+      }
+    }
+
+    function redirectToDashboard() {
+      if (registeredUserId) {
+        window.location.href = '/dashboard/' + registeredUserId;
+      }
+    }
+  </script>
+</body>
+</html>

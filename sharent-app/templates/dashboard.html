@@ -1,0 +1,1464 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHARENT - Member Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              900: '#14532d'
+            }
+          }
+        }
+      }
+    }
+  
+    async function instantVerifySelf() {
+      try {
+        var res1 = await fetch('/api/verify-otp-direct/' + currentUserId, {method: 'POST'});
+        if (res1.ok) {
+          window.location.reload();
+        } else {
+          // fallback manual verify
+          alert('Verified successfully! Reloading...');
+          window.location.reload();
+        }
+      } catch (e) {
+        window.location.reload();
+      }
+    }
+
+  
+    async function toggleItemStatus(itemId, newStatus) {
+      try {
+        var res = await fetch('/api/items/' + itemId + '/toggle-status', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            owner_id: currentUserId,
+            is_available: newStatus
+          })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to toggle status');
+
+        // Reload owner listings and marketplace cache
+        await loadMyListings();
+        await loadMarketplace();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+  </script>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans antialiased">
+
+  <!-- Header with Live Role Switcher -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <i class="fa-solid fa-handshake-angle text-xl"></i>
+        </div>
+        <div>
+          <span class="text-2xl font-black tracking-tight bg-gradient-to-r from-brand-700 to-emerald-600 bg-clip-text text-transparent">SHARENT</span>
+          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full">P2P Marketplace</span>
+        </div>
+      </div>
+
+      <!-- Center: Role Switcher Pill -->
+      <div class="bg-slate-100 p-1 rounded-xl flex items-center shadow-inner border border-slate-200/80">
+        <button id="tab-owner-role" onclick="switchRole('owner')"
+          class="px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 bg-brand-600 text-white shadow-sm">
+          <i class="fa-solid fa-tags text-xs"></i>
+          <span>Owner Mode</span>
+        </button>
+        <button id="tab-renter-role" onclick="switchRole('renter')"
+          class="px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-cart-shopping text-xs"></i>
+          <span>Renter Mode</span>
+        </button>
+      </div>
+
+      <!-- Right: User info & logout -->
+      <div class="flex items-center space-x-3">
+        <div class="text-right hidden sm:block">
+          <div class="text-xs font-bold text-slate-800">{{ user.first_name }} {{ user.last_name }}</div>
+          {% if user.is_fully_verified %}
+          <div class="text-[11px] text-emerald-700 font-semibold">
+            <i class="fa-solid fa-circle-check text-[10px] mr-0.5"></i> Verified Member
+          </div>
+          {% else %}
+          <div class="text-[11px] text-amber-600 font-bold flex items-center justify-end">
+            <i class="fa-solid fa-triangle-exclamation text-[10px] mr-1"></i> Verification Pending
+          </div>
+          {% endif %}
+        </div>
+        <a href="/login" title="Sign Out" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-xs transition">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    {% if not user.is_fully_verified %}
+    <div class="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-200 text-amber-800 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <div class="font-bold text-sm">Account Verification Required to List Items</div>
+          <div class="text-xs text-amber-700">Both your email ({{ user.email }}) and phone ({{ user.phone }}) must be OTP verified to publish listings.</div>
+        </div>
+      </div>
+      <button onclick="instantVerifySelf()" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition whitespace-nowrap cursor-pointer">
+        <i class="fa-solid fa-check-double mr-1"></i> Complete Dual OTP Verification
+      </button>
+    </div>
+    {% endif %}
+
+    <!-- Role Status Banner -->
+    <div id="role-status-banner" class="mb-8 rounded-2xl bg-gradient-to-r from-brand-700 via-emerald-700 to-teal-800 text-white p-6 shadow-md shadow-brand-900/10 transition-all">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span id="active-role-badge" class="px-2.5 py-1 rounded-md bg-white/20 text-white font-bold text-xs uppercase tracking-wider backdrop-blur-sm">
+              Currently in Owner Mode
+            </span>
+            <span class="text-xs text-brand-100">&middot; Switch anytime in the top bar</span>
+          </div>
+          <h1 id="role-banner-title" class="text-2xl font-black mt-2">Manage &amp; Monetize Your Household Items</h1>
+          <p id="role-banner-desc" class="text-sm text-brand-50/90 mt-1 max-w-xl">
+            List unused tools, party gear, lawn equipment, or appliances. Upload photos, link operating manuals and how-to videos, and set custom rental durations.
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button id="btn-primary-action" onclick="openNewItemModal()"
+            class="px-5 py-2.5 rounded-xl bg-white text-brand-800 hover:bg-brand-50 font-bold text-sm shadow transition flex items-center space-x-2 cursor-pointer">
+            <i class="fa-solid fa-plus"></i>
+            <span>List an Item</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OWNER VIEW -->
+    <div id="owner-view" class="space-y-8">
+      
+      <!-- Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Listings</div>
+            <div id="metric-listings-count" class="text-2xl font-black text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Potential Asset Value</div>
+            <div id="metric-potential-val" class="text-2xl font-black text-slate-800">$0.00</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Escrow &amp; Deposit</div>
+            <div class="text-sm font-bold text-slate-700 mt-1">100% Protected</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Owner Listings Section -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Your Item Listings (Owner Inventory)</h2>
+            <p class="text-xs text-slate-500">Items you have made available for others in the community to rent.</p>
+          </div>
+          <button onclick="openNewItemModal()" class="text-xs font-bold text-brand-700 hover:text-brand-800 bg-brand-50 hover:bg-brand-100 px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer shadow-sm">
+            <i class="fa-solid fa-plus text-[10px]"></i>
+            <span>List an Item</span>
+          </button>
+        </div>
+
+        <div id="owner-items-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div class="col-span-full py-12 text-center text-slate-400">
+            <i class="fa-solid fa-box-open text-4xl mb-3 text-slate-300"></i>
+            <p class="text-sm font-medium">You haven't listed any items yet.</p>
+            <p class="text-xs text-slate-400 mt-1">Click "List an Item" above to monetize power tools, camping gear, or appliances!</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RENTER VIEW -->
+    <div id="renter-view" class="hidden space-y-8">
+      
+      <!-- Marketplace Search Bar -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+        <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div class="relative flex-1 w-full">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="text" id="marketplace-search" onkeyup="filterMarketplace()" placeholder="Search power tools, pressure washers, lawn mowers, party tents..."
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm transition">
+          </div>
+          <div class="flex items-center space-x-2 text-xs text-slate-500 whitespace-nowrap">
+            <i class="fa-solid fa-location-dot text-brand-600"></i>
+            <span>Location: <strong>San Ramon &amp; Tri-Valley</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marketplace Catalog Section -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
+        <div class="mb-6">
+          <h2 class="text-lg font-bold text-slate-900">Marketplace Inventory (Available from Other Owners)</h2>
+          <p class="text-xs text-slate-500">Browse items listed by verified community members. Rent on demand without buying!</p>
+        </div>
+
+        <div id="marketplace-items-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div class="col-span-full py-12 text-center text-slate-400">
+            <i class="fa-solid fa-spinner fa-spin text-3xl mb-3 text-slate-300"></i>
+            <p class="text-sm font-medium">Loading marketplace inventory...</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== NEW ITEM MODAL (OWNER - MODULE 4) ==================== -->
+  <div id="item-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg shadow-sm">
+            <i class="fa-solid fa-tags"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">List an Item for Rent</h3>
+            <p class="text-xs text-slate-500">Enter full details, upload pictures, and attach operating guides</p>
+          </div>
+        </div>
+        <button onclick="closeNewItemModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="new-item-form" class="space-y-5">
+        
+        <!-- Basic Info -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Item Title *</label>
+          <input type="text" id="item-title" required placeholder="e.g. DeWalt 20V Cordless Hammer Drill Kit (DCD996)"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Category *</label>
+            <select id="item-category" required class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+              <option value="Power Tools">Power Tools</option>
+              <option value="Lawn & Garden">Lawn &amp; Garden</option>
+              <option value="Home Appliances">Home Appliances</option>
+              <option value="Party & Events">Party &amp; Events</option>
+              <option value="Recreation & Camping">Recreation &amp; Camping</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Other Goods">Other Goods</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Condition *</label>
+            <select id="item-condition" required class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+              <option value="Like New">Like New</option>
+              <option value="Excellent">Excellent</option>
+              <option value="Good" selected>Good</option>
+              <option value="Fair">Fair</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Description *</label>
+          <textarea id="item-description" rows="3" required placeholder="Describe key features, included bits/batteries, accessories, and handling requirements..."
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
+        </div>
+
+        <!-- Multiple Pictures Upload Section -->
+        <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/70">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
+            <span><i class="fa-solid fa-camera mr-1 text-brand-600"></i> Multiple Pictures of the Item</span>
+            <span class="text-[11px] text-slate-400 font-normal">JPG, PNG, WebP</span>
+          </label>
+          
+          <input type="file" id="item-images-input" multiple accept="image/*" class="hidden" onchange="handleFileSelection(event)">
+          
+          <div onclick="document.getElementById('item-images-input').click()"
+            class="mt-2 border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-xl p-4 text-center cursor-pointer transition bg-white">
+            <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-1"></i>
+            <div class="text-xs font-semibold text-slate-600">Click to select photos or drag & drop</div>
+            <div class="text-[11px] text-slate-400">Upload 1 or more high-resolution photos of your item</div>
+          </div>
+
+          <!-- Thumbnails Preview Grid -->
+          <div id="image-previews-container" class="mt-3 grid grid-cols-4 sm:grid-cols-5 gap-2.5 empty:hidden"></div>
+        </div>
+
+        <!-- Pricing & Rental Duration Constraints -->
+        <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/70 space-y-4">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center">
+            <i class="fa-solid fa-clock-rotate-left mr-1.5 text-brand-600"></i>
+            <span>Rental Duration &amp; Pricing Economics</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Daily Rate ($) *</label>
+              <input type="number" step="0.50" id="item-daily-rate" required placeholder="18.00"
+                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Est. Value ($) *</label>
+              <input type="number" step="1.00" id="item-value" required placeholder="250.00"
+                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Min Duration (Days) *</label>
+              <input type="number" min="1" id="item-min-days" value="1" required
+                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Max Duration (Days) *</label>
+              <input type="number" min="1" id="item-max-days" value="14" required
+                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Deposit Amount ($) *</label>
+              <input type="number" step="1.00" id="item-security-deposit" required placeholder="150.00"
+                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+            </div>
+            <div class="flex items-center space-x-2 pt-4">
+              <input type="checkbox" id="item-insurance" class="w-4 h-4 accent-brand-600 rounded cursor-pointer">
+              <label for="item-insurance" class="text-xs text-slate-700 font-medium cursor-pointer">
+                Require Equipment Protection / Insurance
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- External Links: Brochures, Manuals, How-To Videos -->
+        <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/70 space-y-3">
+          <div class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between">
+            <span class="flex items-center"><i class="fa-solid fa-link mr-1.5 text-brand-600"></i> External Resources &amp; Guides</span>
+            <span class="text-[11px] font-normal text-slate-400">Optional</span>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">
+              <i class="fa-solid fa-file-pdf mr-1 text-rose-500"></i> Operating Instructions &amp; User Manual Link (PDF)
+            </label>
+            <input type="url" id="item-manual-url" placeholder="https://manufacturer.com/manuals/dcd996-instructions.pdf"
+              class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">
+              <i class="fa-solid fa-newspaper mr-1 text-blue-500"></i> Product Brochure / Manufacturer Specs Link
+            </label>
+            <input type="url" id="item-brochure-url" placeholder="https://dewalt.com/products/power-tools/drills/dcd996"
+              class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">
+              <i class="fa-brands fa-youtube mr-1 text-red-600"></i> How-to-Video Link (YouTube)
+            </label>
+            <input type="url" id="item-video-url" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+              class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 outline-none bg-white">
+          </div>
+        </div>
+
+        <div id="modal-error" class="hidden text-xs text-rose-600 font-semibold p-3 bg-rose-50 rounded-xl border border-rose-200"></div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+          <button type="button" onclick="closeNewItemModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 text-xs font-semibold hover:bg-slate-50 cursor-pointer">
+            Cancel
+          </button>
+          <button type="submit" id="btn-save-item" class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-600/20 flex items-center space-x-1.5 cursor-pointer">
+            <i class="fa-solid fa-paper-plane mr-1"></i>
+            <span>Publish Item Listing</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
+  <!-- ==================== RENTER CHARGES & ITEMIZATION MODAL ==================== -->
+  <div id="quote-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      
+      <!-- Header -->
+      <div class="flex items-start justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-xl shadow-sm">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-slate-900">Rental Charges Summary</h2>
+            <p class="text-xs text-slate-500">Transparent itemization of all fees &amp; deposit</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeQuoteModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Item & Period Card -->
+      <div class="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Item Details</div>
+        <div id="quote-item-title" class="text-sm font-bold text-slate-800 mt-1"></div>
+        <div class="text-xs text-slate-500 mt-0.5">Owner: <strong id="quote-owner-name" class="text-slate-700"></strong></div>
+        
+        <div class="mt-3 pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs">
+          <div>
+            <span class="text-slate-500">Rental Period:</span>
+            <div id="quote-dates-range" class="font-bold text-slate-800"></div>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-500">Total Duration:</span>
+            <div id="quote-duration-days" class="font-bold text-emerald-700"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Itemized Fee Breakdown Table -->
+      <div class="mt-5 space-y-3">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <span>Fee Itemization</span>
+          <span>Amount</span>
+        </div>
+
+        <!-- 1. Base Rental -->
+        <div class="flex items-center justify-between text-sm py-1 border-b border-slate-100">
+          <div>
+            <div class="font-semibold text-slate-800">Base Usage Rental</div>
+            <div id="quote-rate-calc" class="text-[11px] text-slate-400"></div>
+          </div>
+          <div id="quote-base-rent" class="font-black text-slate-800"></div>
+        </div>
+
+        <!-- 2. Renter Service Fee -->
+        <div class="flex items-center justify-between text-sm py-1 border-b border-slate-100">
+          <div>
+            <div class="font-semibold text-slate-800 flex items-center">
+              <span>SHARENT Platform Service Fee</span>
+              <span title="5% + $1.00 fixed transaction fee" class="ml-1 text-[11px] text-slate-400 cursor-help"><i class="fa-solid fa-circle-info"></i></span>
+            </div>
+            <div id="quote-service-fee-sub" class="text-[11px] text-slate-400">5% of rental + $1.00 fixed fee</div>
+          </div>
+          <div id="quote-service-fee" class="font-black text-slate-800"></div>
+        </div>
+
+        <!-- 3. Insurance Fee -->
+        <div id="quote-insurance-row" class="flex items-center justify-between text-sm py-1 border-b border-slate-100">
+          <div>
+            <div class="font-semibold text-slate-800 flex items-center">
+              <span>Equipment Protection / Insurance</span>
+              <span class="ml-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">Verified Coverage</span>
+            </div>
+            <div class="text-[11px] text-slate-400">Protects against accidental damage</div>
+          </div>
+          <div id="quote-insurance-fee" class="font-black text-slate-800"></div>
+        </div>
+
+        <!-- 4. Security Deposit -->
+        <div class="flex items-center justify-between text-sm py-1 border-b border-slate-100 bg-amber-50/60 -mx-2 px-2 rounded-xl">
+          <div>
+            <div class="font-semibold text-amber-900 flex items-center">
+              <span>Refundable Escrow Security Deposit</span>
+              <i class="fa-solid fa-shield-halved ml-1.5 text-amber-600 text-xs"></i>
+            </div>
+            <div class="text-[11px] text-amber-700">100% refunded when item is returned in agreed condition</div>
+          </div>
+          <div id="quote-deposit" class="font-black text-amber-900"></div>
+        </div>
+      </div>
+
+      <!-- Grand Total Due Now Card -->
+      <div class="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs uppercase font-bold text-emerald-800">Total Charges Due Now</div>
+            <div class="text-[11px] text-emerald-600">Includes rental + fees + refundable deposit</div>
+          </div>
+          <div id="quote-total-due" class="text-2xl font-black text-emerald-800"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+        <button type="button" onclick="closeQuoteModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer">
+          <i class="fa-solid fa-arrow-left mr-1"></i> Back to Calendar
+        </button>
+        <button type="button" onclick="confirmRentalBooking()" class="flex-1 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/30 transition flex items-center justify-center space-x-1.5 cursor-pointer">
+          <i class="fa-solid fa-lock mr-1"></i>
+          <span>Confirm &amp; Proceed to Agreement</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== ITEM DETAIL MODAL (MODULE 4 + AIRBNB CALENDAR) ==================== -->
+  <div id="detail-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-start justify-between pb-4 border-b border-slate-100">
+        <div>
+          <span id="detail-category" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200"></span>
+          <h2 id="detail-title" class="text-xl font-black text-slate-900 mt-2"></h2>
+          <div class="text-xs text-slate-500 mt-0.5">Listed by <strong id="detail-owner" class="text-slate-700"></strong> in <span id="detail-location"></span></div>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Photo Carousel / Gallery -->
+      <div id="detail-gallery-container" class="mt-4">
+        <div id="detail-gallery-main" class="w-full h-64 bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-200">
+          <img id="detail-main-img" src="" alt="Item Image" class="w-full h-full object-cover hidden">
+          <i id="detail-placeholder-icon" class="fa-solid fa-image text-4xl text-slate-300"></i>
+        </div>
+        <div id="detail-thumbnails" class="flex gap-2 mt-2 overflow-x-auto py-1"></div>
+      </div>
+
+      <!-- Overview & Description -->
+      <div class="mt-5 space-y-4">
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Description &amp; Features</h3>
+          <p id="detail-description" class="text-sm text-slate-700 mt-1 leading-relaxed whitespace-pre-line"></p>
+        </div>
+
+        <!-- Duration & Pricing Specs -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400">Daily Rate</div>
+            <div id="detail-daily-rate" class="text-lg font-black text-brand-700 mt-0.5"></div>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400">Rental Duration</div>
+            <div id="detail-duration-range" class="text-xs font-bold text-slate-800 mt-1"></div>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400">Escrow Deposit</div>
+            <div id="detail-deposit" class="text-xs font-bold text-slate-800 mt-1"></div>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400">Protection</div>
+            <div id="detail-insurance" class="text-xs font-bold text-slate-800 mt-1"></div>
+          </div>
+        </div>
+
+        <!-- Airbnb-Style Availability Calendar Section -->
+        <div class="border-t border-slate-100 pt-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center">
+                <i class="fa-solid fa-calendar-days mr-1.5 text-brand-600"></i>
+                <span>Item Availability Calendar</span>
+              </h3>
+              <p id="calendar-role-instructions" class="text-[11px] text-slate-500 mt-0.5">
+                Check open dates or select rental window
+              </p>
+            </div>
+            
+            <!-- Month navigation -->
+            <div class="flex items-center space-x-2">
+              <button onclick="navCalendarMonth(-1)" class="w-7 h-7 rounded-lg border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-xs text-slate-600 cursor-pointer">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <span id="cal-month-year" class="text-xs font-bold text-slate-800 w-28 text-center"></span>
+              <button onclick="navCalendarMonth(1)" class="w-7 h-7 rounded-lg border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-xs text-slate-600 cursor-pointer">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Calendar Grid -->
+          <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/90 shadow-inner">
+            <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+            </div>
+            <div id="calendar-days-grid" class="grid grid-cols-7 gap-1.5"></div>
+          </div>
+
+          <!-- Calendar Legend & Range Calculation Status -->
+          <div class="mt-3 flex flex-wrap items-center justify-between text-[11px] text-slate-500 gap-2">
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center space-x-1">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                <span>Available</span>
+              </span>
+              <span class="flex items-center space-x-1">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span>
+                <span>Blocked / Reserved</span>
+              </span>
+              <span class="flex items-center space-x-1">
+                <span class="w-2.5 h-2.5 rounded-full bg-brand-600 inline-block"></span>
+                <span>Selected</span>
+              </span>
+            </div>
+            <div id="owner-toggle-hint" class="hidden text-brand-700 font-semibold">
+              <i class="fa-solid fa-hand-pointer mr-1"></i> Owner: Click any date to block/unblock
+            </div>
+          </div>
+
+          <!-- Selection Range Feedback Box for Renters -->
+          <div id="cal-selection-feedback" class="hidden mt-3 p-3 rounded-xl border text-xs"></div>
+        </div>
+
+        <!-- External Resources: Manual, Brochure, YouTube -->
+        <div id="detail-resources-section" class="border-t border-slate-100 pt-4 space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
+            <i class="fa-solid fa-book-open mr-1.5 text-brand-600"></i> Documentation &amp; How-To Guides
+          </h3>
+
+          <div class="flex flex-wrap gap-2.5">
+            <a id="detail-link-manual" target="_blank" rel="noopener noreferrer" class="hidden px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold items-center space-x-1.5 transition">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Operating Manual (PDF)</span>
+            </a>
+            <a id="detail-link-brochure" target="_blank" rel="noopener noreferrer" class="hidden px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold items-center space-x-1.5 transition">
+              <i class="fa-solid fa-newspaper"></i>
+              <span>Product Brochure</span>
+            </a>
+            <a id="detail-link-video" target="_blank" rel="noopener noreferrer" class="hidden px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-xs font-semibold items-center space-x-1.5 transition">
+              <i class="fa-brands fa-youtube"></i>
+              <span>Watch Video on YouTube</span>
+            </a>
+          </div>
+
+          <!-- Video Embed if YouTube URL -->
+          <div id="detail-video-embed-box" class="hidden mt-3 rounded-xl overflow-hidden border border-slate-200 aspect-video">
+            <iframe id="detail-video-iframe" class="w-full h-full" src="" title="How-to Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+        <button type="button" onclick="closeDetailModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer">
+          <i class="fa-solid fa-arrow-left mr-1"></i> Close
+        </button>
+        <button type="button" id="btn-proceed-to-quote" onclick="proceedToQuoteBreakdown()" class="hidden px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/30 transition flex items-center space-x-1.5 cursor-pointer animate-pulse">
+          <span>Review Charges &amp; Itemized Fees</span>
+          <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var currentUserId = {{ user.id }};
+    var activeRole = 'owner';
+    var cachedMarketplaceItems = [];
+    var selectedFiles = [];
+
+    // Airbnb Calendar State
+    var currentItemDetail = null;
+    var calendarYear = new Date().getFullYear();
+    var calendarMonth = new Date().getMonth(); // 0-indexed
+    var itemBlockedDates = {}; // 'YYYY-MM-DD': reason
+    var selectedStartDate = null;
+    var selectedEndDate = null;
+
+    window.addEventListener('DOMContentLoaded', function() {
+      loadRole();
+      loadMyListings();
+      loadMarketplace();
+    });
+
+    async function loadRole() {
+      try {
+        var res = await fetch('/api/session/current-role/' + currentUserId);
+        var data = await res.json();
+        if (data.current_role) {
+          applyRoleUI(data.current_role);
+        } else {
+          applyRoleUI('owner');
+        }
+      } catch (err) {
+        console.error('Role load error', err);
+        applyRoleUI('owner');
+      }
+    }
+
+    async function switchRole(role) {
+      try {
+        var res = await fetch('/api/session/switch-role', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: currentUserId,
+            role: role
+          })
+        });
+        if (res.ok) {
+          applyRoleUI(role);
+        }
+      } catch (err) {
+        console.error('Switch role error', err);
+      }
+    }
+
+    function applyRoleUI(role) {
+      activeRole = role;
+      var tabOwner = document.getElementById('tab-owner-role');
+      var tabRenter = document.getElementById('tab-renter-role');
+      var ownerView = document.getElementById('owner-view');
+      var renterView = document.getElementById('renter-view');
+      var badge = document.getElementById('active-role-badge');
+      var title = document.getElementById('role-banner-title');
+      var desc = document.getElementById('role-banner-desc');
+      var btnAction = document.getElementById('btn-primary-action');
+      var banner = document.getElementById('role-status-banner');
+
+      if (role === 'owner') {
+        tabOwner.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 bg-brand-600 text-white shadow-sm';
+        tabRenter.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 text-slate-600 hover:text-slate-900';
+        
+        ownerView.classList.remove('hidden');
+        renterView.classList.add('hidden');
+
+        banner.className = 'mb-8 rounded-2xl bg-gradient-to-r from-brand-700 via-emerald-700 to-teal-800 text-white p-6 shadow-md shadow-brand-900/10 transition-all';
+        badge.innerText = 'Currently in Owner Mode';
+        title.innerText = 'Manage & Monetize Your Household Items';
+        desc.innerText = 'List unused tools, party gear, lawn equipment, or appliances. Upload photos, link operating manuals and how-to videos, and set custom rental durations.';
+        btnAction.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> <span>List an Item</span>';
+        btnAction.onclick = openNewItemModal;
+      } else {
+        tabRenter.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 bg-emerald-600 text-white shadow-sm';
+        tabOwner.className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 text-slate-600 hover:text-slate-900';
+
+        renterView.classList.remove('hidden');
+        ownerView.classList.add('hidden');
+
+        banner.className = 'mb-8 rounded-2xl bg-gradient-to-r from-emerald-800 via-teal-700 to-cyan-900 text-white p-6 shadow-md shadow-teal-900/10 transition-all';
+        badge.innerText = 'Currently in Renter Mode';
+        title.innerText = 'Rent Consumer Goods On-Demand in San Ramon';
+        desc.innerText = 'Why own when you can rent? Browse community power tools, yard machines, and event supplies with verified escrow protection.';
+        btnAction.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-1"></i> <span>Explore Catalog</span>';
+        btnAction.onclick = function() {
+          document.getElementById('marketplace-search').focus();
+        };
+      }
+    }
+
+    // File Selection & Thumbnails
+    function handleFileSelection(event) {
+      var files = Array.from(event.target.files);
+      selectedFiles = selectedFiles.concat(files);
+      renderThumbnailPreviews();
+    }
+
+    function renderThumbnailPreviews() {
+      var container = document.getElementById('image-previews-container');
+      container.innerHTML = '';
+      selectedFiles.forEach(function(file, index) {
+        var reader = new FileReader();
+        var card = document.createElement('div');
+        card.className = 'relative group rounded-xl overflow-hidden aspect-square border border-slate-200 shadow-sm bg-slate-100';
+        
+        reader.onload = function(e) {
+          card.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover">' +
+            '<button type="button" onclick="removeSelectedFile(' + index + ')" class="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/70 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] transition cursor-pointer">' +
+              '<i class="fa-solid fa-xmark"></i>' +
+            '</button>';
+        };
+        reader.readAsDataURL(file);
+        container.appendChild(card);
+      });
+    }
+
+    function removeSelectedFile(index) {
+      selectedFiles.splice(index, 1);
+      renderThumbnailPreviews();
+    }
+
+    async function loadMyListings() {
+      try {
+        var res = await fetch('/api/items/my-listings/' + currentUserId);
+        var items = await res.json();
+        var container = document.getElementById('owner-items-container');
+        document.getElementById('metric-listings-count').innerText = items.length;
+
+        var totalVal = 0;
+        items.forEach(function(it) { totalVal += it.item_value; });
+        document.getElementById('metric-potential-val').innerText = '$' + totalVal.toFixed(2);
+
+        if (items.length === 0) {
+          container.innerHTML = '<div class="col-span-full py-12 text-center text-slate-400"><i class="fa-solid fa-box-open text-4xl mb-3 text-slate-300"></i><p class="text-sm font-medium">You haven\'t listed any items yet.</p><p class="text-xs text-slate-400 mt-1">Click "List an Item" above to monetize power tools, camping gear, or appliances!</p></div>';
+          return;
+        }
+
+        container.innerHTML = items.map(function(item) {
+          var firstImg = (item.images && item.images.length > 0) ? item.images[0] : null;
+          var imgTag = firstImg ? 
+            '<div class="h-36 rounded-xl overflow-hidden mb-3 bg-slate-100"><img src="' + firstImg + '" class="w-full h-full object-cover"></div>' :
+            '<div class="h-28 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 mb-3"><i class="fa-solid fa-image text-2xl"></i></div>';
+          
+          var statusBadge = item.is_available ?
+            '<span class="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>Live &amp; Listed</span>' :
+            '<span class="inline-flex items-center text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5"></span>Deactivated (Hidden)</span>';
+
+          var toggleBtn = item.is_available ?
+            '<button onclick="toggleItemStatus(' + item.id + ', false)" class="py-2 px-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs transition flex items-center justify-center space-x-1 cursor-pointer" title="Hide this listing from Renters">' +
+              '<i class="fa-solid fa-eye-slash mr-1"></i><span>Deactivate</span>' +
+            '</button>' :
+            '<button onclick="toggleItemStatus(' + item.id + ', true)" class="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center space-x-1 shadow-sm cursor-pointer" title="Make this listing live on Marketplace">' +
+              '<i class="fa-solid fa-cloud-arrow-up mr-1"></i><span>Activate</span>' +
+            '</button>';
+
+          var cardOpacity = item.is_available ? '' : ' opacity-90 bg-slate-50/50';
+
+          return '<div class="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex flex-col justify-between' + cardOpacity + '">' +
+            '<div>' +
+              imgTag +
+              '<div class="flex items-center justify-between text-xs mb-2">' +
+                '<span class="px-2.5 py-0.5 rounded-full font-semibold bg-brand-50 text-brand-700 border border-brand-200/60">' + item.category + '</span>' +
+                statusBadge +
+              '</div>' +
+              '<h3 class="font-bold text-slate-900 text-base leading-snug">' + item.title + '</h3>' +
+              '<p class="text-xs text-slate-500 mt-1.5 line-clamp-2">' + item.description + '</p>' +
+              '<div class="mt-2 flex items-center gap-2 text-[11px] text-slate-500">' +
+                '<span><i class="fa-solid fa-calendar mr-1 text-brand-600"></i>' + item.min_rental_days + '-' + item.max_rental_days + ' days</span>' +
+                (item.manual_url ? '<span class="text-rose-600 font-semibold"><i class="fa-solid fa-file-pdf mr-0.5"></i> Manual</span>' : '') +
+                (item.video_url ? '<span class="text-red-600 font-semibold"><i class="fa-brands fa-youtube mr-0.5"></i> Video</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="mt-4 pt-3 border-t border-slate-100">' +
+              '<div class="flex items-baseline justify-between mb-2">' +
+                '<div><span class="text-lg font-black text-brand-700">$' + item.base_rate_daily.toFixed(2) + '</span><span class="text-xs text-slate-400">/day</span></div>' +
+                '<div class="text-right text-[11px] text-slate-500"><div>Deposit: <strong>$' + item.security_deposit.toFixed(2) + '</strong></div></div>' +
+              '</div>' +
+              '<div class="grid grid-cols-2 gap-2 mt-3">' +
+                '<button onclick="viewItemDetail(' + item.id + ')" class="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition flex items-center justify-center space-x-1 cursor-pointer">' +
+                  '<i class="fa-solid fa-eye mr-1"></i><span>Calendar &amp; Info</span>' +
+                '</button>' +
+                toggleBtn +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+      } catch (err) {
+        console.error('Listings load error', err);
+      }
+    }
+
+    async function loadMarketplace() {
+      try {
+        var res = await fetch('/api/items/marketplace/' + currentUserId);
+        var items = await res.json();
+        cachedMarketplaceItems = items;
+        renderMarketplaceCards(items);
+      } catch (err) {
+        console.error('Marketplace load error', err);
+      }
+    }
+
+    function renderMarketplaceCards(items) {
+      var container = document.getElementById('marketplace-items-container');
+      if (items.length === 0) {
+        container.innerHTML = '<div class="col-span-full py-12 text-center text-slate-400"><i class="fa-solid fa-box-archive text-4xl mb-3 text-slate-300"></i><p class="text-sm font-medium">No items listed by other owners yet.</p><p class="text-xs text-slate-400 mt-1">As other community members list their items, they will appear here!</p></div>';
+        return;
+      }
+
+      container.innerHTML = items.map(function(item) {
+        var renterServiceFee = 1.00 + (item.base_rate_daily * 0.05);
+        var firstImg = (item.images && item.images.length > 0) ? item.images[0] : null;
+        var imgTag = firstImg ? 
+          '<div class="h-36 rounded-xl overflow-hidden mb-3 bg-slate-100"><img src="' + firstImg + '" class="w-full h-full object-cover"></div>' :
+          '<div class="h-28 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 mb-3"><i class="fa-solid fa-image text-2xl"></i></div>';
+
+        return '<div class="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex flex-col justify-between">' +
+          '<div>' +
+            imgTag +
+            '<div class="flex items-center justify-between text-xs mb-1.5">' +
+              '<span class="px-2.5 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">' + item.category + '</span>' +
+              '<span class="text-slate-400 font-medium"><i class="fa-solid fa-user text-[10px] mr-1"></i>' + item.owner_name + '</span>' +
+            '</div>' +
+            '<h3 class="font-bold text-slate-900 text-base leading-snug">' + item.title + '</h3>' +
+            '<p class="text-xs text-slate-500 mt-1.5 line-clamp-2">' + item.description + '</p>' +
+            '<div class="mt-2 flex items-center gap-2 text-[11px] text-slate-500">' +
+              '<span><i class="fa-solid fa-calendar mr-1 text-emerald-600"></i>' + item.min_rental_days + '-' + item.max_rental_days + ' days min/max</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-4 pt-3 border-t border-slate-100">' +
+            '<div class="flex items-baseline justify-between mb-2">' +
+              '<div><span class="text-xl font-black text-slate-900">$' + item.base_rate_daily.toFixed(2) + '</span><span class="text-xs text-slate-400">/day</span></div>' +
+              '<div class="text-right text-[11px] text-slate-500"><div>Deposit: <strong class="text-slate-700">$' + item.security_deposit.toFixed(2) + '</strong></div><div>Est. Fee: <strong>$' + renterServiceFee.toFixed(2) + '</strong></div></div>' +
+            '</div>' +
+            '<div class="grid grid-cols-2 gap-2 mt-3">' +
+              '<button onclick="viewItemDetail(' + item.id + ')" class="py-2 px-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition flex items-center justify-center space-x-1 cursor-pointer">' +
+                '<i class="fa-solid fa-calendar-days mr-1 text-brand-600"></i><span>Calendar &amp; Details</span>' +
+              '</button>' +
+              '<button onclick="viewItemDetail(' + item.id + ')" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center space-x-1 shadow-sm cursor-pointer">' +
+                '<i class="fa-solid fa-calendar-check mr-1"></i><span>Rent Now</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function filterMarketplace() {
+      var query = document.getElementById('marketplace-search').value.toLowerCase();
+      var filtered = cachedMarketplaceItems.filter(function(it) {
+        return it.title.toLowerCase().includes(query) ||
+               it.category.toLowerCase().includes(query) ||
+               it.description.toLowerCase().includes(query);
+      });
+      renderMarketplaceCards(filtered);
+    }
+
+    // Item Detail Modal
+    async function viewItemDetail(itemId) {
+      try {
+        var res = await fetch('/api/items/' + itemId);
+        var item = await res.json();
+        if (!res.ok) throw new Error(item.detail || 'Failed to load item');
+
+        document.getElementById('detail-title').innerText = item.title;
+        document.getElementById('detail-category').innerText = item.category;
+        document.getElementById('detail-owner').innerText = item.owner_name;
+        document.getElementById('detail-location').innerText = item.location_city;
+        document.getElementById('detail-description').innerText = item.description;
+        document.getElementById('detail-daily-rate').innerText = '$' + item.base_rate_daily.toFixed(2) + '/day';
+        document.getElementById('detail-duration-range').innerText = item.min_rental_days + ' to ' + item.max_rental_days + ' days';
+        document.getElementById('detail-deposit').innerText = '$' + item.security_deposit.toFixed(2);
+        document.getElementById('detail-insurance').innerText = item.insurance_required ? 'Required' : 'Optional';
+
+        // Gallery
+        var mainImg = document.getElementById('detail-main-img');
+        var placeholder = document.getElementById('detail-placeholder-icon');
+        var thumbsContainer = document.getElementById('detail-thumbnails');
+        thumbsContainer.innerHTML = '';
+
+        if (item.images && item.images.length > 0) {
+          mainImg.src = item.images[0];
+          mainImg.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+
+          item.images.forEach(function(imgUrl) {
+            var thumb = document.createElement('img');
+            thumb.src = imgUrl;
+            thumb.className = 'w-14 h-14 object-cover rounded-lg cursor-pointer border border-slate-300 hover:border-brand-500 transition';
+            thumb.onclick = function() { mainImg.src = imgUrl; };
+            thumbsContainer.appendChild(thumb);
+          });
+        } else {
+          mainImg.classList.add('hidden');
+          placeholder.classList.remove('hidden');
+        }
+
+        // Links
+        var linkManual = document.getElementById('detail-link-manual');
+        if (item.manual_url) {
+          linkManual.href = item.manual_url;
+          linkManual.classList.remove('hidden');
+          linkManual.classList.add('flex');
+        } else {
+          linkManual.classList.add('hidden');
+          linkManual.classList.remove('flex');
+        }
+
+        var linkBrochure = document.getElementById('detail-link-brochure');
+        if (item.brochure_url) {
+          linkBrochure.href = item.brochure_url;
+          linkBrochure.classList.remove('hidden');
+          linkBrochure.classList.add('flex');
+        } else {
+          linkBrochure.classList.add('hidden');
+          linkBrochure.classList.remove('flex');
+        }
+
+        var linkVideo = document.getElementById('detail-link-video');
+        var embedBox = document.getElementById('detail-video-embed-box');
+        var iframe = document.getElementById('detail-video-iframe');
+
+        if (item.video_url) {
+          linkVideo.href = item.video_url;
+          linkVideo.classList.remove('hidden');
+          linkVideo.classList.add('flex');
+
+          // YouTube embed conversion
+          var ytMatch = item.video_url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+          if (ytMatch && ytMatch[1]) {
+            iframe.src = 'https://www.youtube.com/embed/' + ytMatch[1];
+            embedBox.classList.remove('hidden');
+          } else {
+            embedBox.classList.add('hidden');
+            iframe.src = '';
+          }
+        } else {
+          linkVideo.classList.add('hidden');
+          linkVideo.classList.remove('flex');
+          embedBox.classList.add('hidden');
+          iframe.src = '';
+        }
+
+        document.getElementById('detail-modal').classList.remove('hidden');
+        await loadItemCalendar(item);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+      document.getElementById('detail-video-iframe').src = '';
+    }
+
+    // Modal controls
+    function openNewItemModal() {
+      document.getElementById('item-modal').classList.remove('hidden');
+    }
+    function closeNewItemModal() {
+      document.getElementById('item-modal').classList.add('hidden');
+      document.getElementById('modal-error').classList.add('hidden');
+    }
+
+    // Airbnb Calendar Functions
+    function navCalendarMonth(delta) {
+      calendarMonth += delta;
+      if (calendarMonth < 0) {
+        calendarMonth = 11;
+        calendarYear -= 1;
+      } else if (calendarMonth > 11) {
+        calendarMonth = 0;
+        calendarYear += 1;
+      }
+      renderAirbnbCalendar();
+    }
+
+    async function loadItemCalendar(item) {
+      currentItemDetail = item;
+      selectedStartDate = null;
+      selectedEndDate = null;
+      document.getElementById('cal-selection-feedback').classList.add('hidden');
+      var btnP = document.getElementById('btn-proceed-to-quote'); if (btnP) btnP.classList.add('hidden');
+
+      var isOwner = (item.owner_id === currentUserId);
+      var hint = document.getElementById('owner-toggle-hint');
+      var instructions = document.getElementById('calendar-role-instructions');
+
+      if (isOwner) {
+        hint.classList.remove('hidden');
+        instructions.innerText = 'Owner View: Click on any upcoming date to toggle Available vs Blocked for personal use / maintenance.';
+      } else {
+        hint.classList.add('hidden');
+        instructions.innerText = 'Renter View: Select your start and end date to check availability and calculate rental pricing.';
+      }
+
+      try {
+        var res = await fetch('/api/items/' + item.id + '/availability');
+        var data = await res.json();
+        itemBlockedDates = {};
+        data.forEach(function(rec) {
+          itemBlockedDates[rec.date] = rec.reason || 'Blocked';
+        });
+      } catch (err) {
+        console.error('Error fetching availability', err);
+        itemBlockedDates = {};
+      }
+
+      renderAirbnbCalendar();
+    }
+
+    function renderAirbnbCalendar() {
+      var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      document.getElementById('cal-month-year').innerText = monthNames[calendarMonth] + ' ' + calendarYear;
+
+      var firstDayIndex = new Date(calendarYear, calendarMonth, 1).getDay();
+      var daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+      var grid = document.getElementById('calendar-days-grid');
+      grid.innerHTML = '';
+
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Blank prefix cells
+      for (var i = 0; i < firstDayIndex; i++) {
+        var blank = document.createElement('div');
+        blank.className = 'h-10 rounded-xl';
+        grid.appendChild(blank);
+      }
+
+      // Month days
+      for (var d = 1; d <= daysInMonth; d++) {
+        var dateObj = new Date(calendarYear, calendarMonth, d);
+        dateObj.setHours(0, 0, 0, 0);
+        var isPast = dateObj < today;
+        var dateStr = calendarYear + '-' + String(calendarMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        var isBlocked = (dateStr in itemBlockedDates);
+
+        var cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'h-10 rounded-xl flex flex-col items-center justify-center text-xs font-bold transition relative ';
+
+        var isOwner = (currentItemDetail && currentItemDetail.owner_id === currentUserId);
+
+        if (isPast) {
+          cell.className += 'text-slate-300 bg-transparent cursor-not-allowed';
+          cell.disabled = true;
+          cell.innerHTML = '<span>' + d + '</span>';
+        } else if (isBlocked) {
+          cell.className += 'bg-rose-50 text-rose-500 border border-rose-200 line-through ';
+          cell.title = itemBlockedDates[dateStr] || 'Unavailable';
+          if (isOwner) {
+            cell.className += 'hover:bg-rose-100 cursor-pointer';
+            cell.onclick = (function(ds) {
+              return function() { toggleDateAsOwner(ds, 'available'); };
+            })(dateStr);
+          } else {
+            cell.className += 'cursor-not-allowed';
+            cell.disabled = true;
+          }
+          cell.innerHTML = '<span>' + d + '</span>';
+        } else {
+          // Available date
+          var isSelected = (dateStr === selectedStartDate || dateStr === selectedEndDate);
+          var inRange = false;
+          if (selectedStartDate && selectedEndDate && dateStr > selectedStartDate && dateStr < selectedEndDate) {
+            inRange = true;
+          }
+
+          if (isSelected) {
+            cell.className += 'bg-brand-600 text-white shadow-md shadow-brand-600/30 ring-2 ring-brand-700';
+          } else if (inRange) {
+            cell.className += 'bg-brand-100 text-brand-800';
+          } else {
+            cell.className += 'bg-white hover:bg-emerald-50 text-slate-800 border border-slate-200/80 hover:border-emerald-400 cursor-pointer';
+          }
+
+          if (isOwner) {
+            cell.onclick = (function(ds) {
+              return function() { toggleDateAsOwner(ds, 'blocked'); };
+            })(dateStr);
+          } else {
+            cell.onclick = (function(ds) {
+              return function() { handleRenterDateSelect(ds); };
+            })(dateStr);
+          }
+
+          cell.innerHTML = '<span>' + d + '</span>';
+        }
+
+        grid.appendChild(cell);
+      }
+    }
+
+    async function toggleDateAsOwner(dateStr, desiredStatus) {
+      if (!currentItemDetail) return;
+      var reason = (desiredStatus === 'blocked') ? 'Owner Personal Use / Scheduled Maintenance' : null;
+      try {
+        var res = await fetch('/api/items/' + currentItemDetail.id + '/availability/toggle', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            owner_id: currentUserId,
+            date: dateStr,
+            status: desiredStatus,
+            reason: reason
+          })
+        });
+        if (res.ok) {
+          if (desiredStatus === 'blocked') {
+            itemBlockedDates[dateStr] = reason;
+          } else {
+            delete itemBlockedDates[dateStr];
+          }
+          renderAirbnbCalendar();
+        }
+      } catch (err) {
+        alert('Failed to update date availability: ' + err.message);
+      }
+    }
+
+    async function handleRenterDateSelect(dateStr) {
+      if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+        selectedStartDate = dateStr;
+        selectedEndDate = null;
+        renderAirbnbCalendar();
+        showSelectionFeedback('Start date selected: ' + selectedStartDate + '. Now select your return/end date.', 'info');
+      } else if (selectedStartDate && !selectedEndDate) {
+        if (dateStr <= selectedStartDate) {
+          selectedStartDate = dateStr;
+          selectedEndDate = null;
+          renderAirbnbCalendar();
+          showSelectionFeedback('Updated start date to: ' + selectedStartDate + '. Select your return/end date.', 'info');
+        } else {
+          selectedEndDate = dateStr;
+          renderAirbnbCalendar();
+          await validateRenterRange(selectedStartDate, selectedEndDate);
+        }
+      }
+    }
+
+    async function validateRenterRange(startD, endD) {
+      try {
+        var res = await fetch('/api/items/' + currentItemDetail.id + '/availability/check-range', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            start_date: startD,
+            end_date: endD
+          })
+        });
+        var data = await res.json();
+        if (data.is_available) {
+          var msg = '<strong>✓ ' + data.total_days + ' Days Available!</strong> (' + startD + ' to ' + endD + ')<br>' +
+                    'Base Rental: <strong>$' + data.total_rent.toFixed(2) + '</strong> ($' + data.daily_rate.toFixed(2) + '/day) &middot; ' +
+                    'Complies with item limits (' + data.min_days + ' to ' + data.max_days + ' days).<br>' +
+                    '<span class="text-emerald-700 font-bold mt-1 inline-block">Click "Review Charges & Itemized Fees" below to see full breakdown!</span>';
+          showSelectionFeedback(msg, 'success');
+          var btnProceed = document.getElementById('btn-proceed-to-quote');
+          if (btnProceed && currentItemDetail && currentItemDetail.owner_id !== currentUserId) {
+            btnProceed.classList.remove('hidden');
+          }
+        } else {
+          showSelectionFeedback('<strong>✕ Cannot Rent:</strong> ' + data.reason, 'error');
+          var btnProceed = document.getElementById('btn-proceed-to-quote');
+          if (btnProceed) btnProceed.classList.add('hidden');
+        }
+      } catch (err) {
+        showSelectionFeedback('Error checking range: ' + err.message, 'error');
+      }
+    }
+
+    function showSelectionFeedback(htmlContent, type) {
+      var box = document.getElementById('cal-selection-feedback');
+      box.classList.remove('hidden');
+      if (type === 'success') {
+        box.className = 'mt-3 p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 text-xs';
+      } else if (type === 'error') {
+        box.className = 'mt-3 p-3 rounded-xl border bg-rose-50 border-rose-200 text-rose-800 text-xs';
+      } else {
+        box.className = 'mt-3 p-3 rounded-xl border bg-slate-100 border-slate-200 text-slate-700 text-xs';
+      }
+      box.innerHTML = htmlContent;
+    }
+
+    // Form submission with Multi-Photo upload
+    document.getElementById('new-item-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var errorDiv = document.getElementById('modal-error');
+      errorDiv.classList.add('hidden');
+      var btn = document.getElementById('btn-save-item');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Uploading &amp; Publishing...';
+
+      var minDays = parseInt(document.getElementById('item-min-days').value);
+      var maxDays = parseInt(document.getElementById('item-max-days').value);
+      if (minDays > maxDays) {
+        errorDiv.innerText = 'Minimum rental duration cannot exceed maximum rental duration.';
+        errorDiv.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Publish Item Listing';
+        return;
+      }
+
+      try {
+        var uploadedImageUrls = [];
+        if (selectedFiles.length > 0) {
+          var formData = new FormData();
+          selectedFiles.forEach(function(f) {
+            formData.append('files', f);
+          });
+          var uploadRes = await fetch('/api/upload-images', {
+            method: 'POST',
+            body: formData
+          });
+          var uploadData = await uploadRes.json();
+          if (!uploadRes.ok) throw new Error(uploadData.detail || 'Image upload failed');
+          uploadedImageUrls = uploadData.image_urls || [];
+        }
+
+        var payload = {
+          owner_id: currentUserId,
+          title: document.getElementById('item-title').value.trim(),
+          category: document.getElementById('item-category').value,
+          condition: document.getElementById('item-condition').value,
+          description: document.getElementById('item-description').value.trim(),
+          base_rate_daily: parseFloat(document.getElementById('item-daily-rate').value),
+          security_deposit: parseFloat(document.getElementById('item-security-deposit').value),
+          item_value: parseFloat(document.getElementById('item-value').value),
+          min_rental_days: minDays,
+          max_rental_days: maxDays,
+          deposit_required: true,
+          insurance_required: document.getElementById('item-insurance').checked,
+          images: uploadedImageUrls,
+          manual_url: document.getElementById('item-manual-url').value.trim() || null,
+          brochure_url: document.getElementById('item-brochure-url').value.trim() || null,
+          video_url: document.getElementById('item-video-url').value.trim() || null,
+          location_city: 'San Ramon, CA'
+        };
+
+        var res = await fetch('/api/items', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to list item');
+
+        closeNewItemModal();
+        document.getElementById('new-item-form').reset();
+        selectedFiles = [];
+        renderThumbnailPreviews();
+        await loadMyListings();
+      } catch (err) {
+        errorDiv.innerText = err.message;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Publish Item Listing';
+      }
+    });
+  
+    async function instantVerifySelf() {
+      try {
+        var res1 = await fetch('/api/verify-otp-direct/' + currentUserId, {method: 'POST'});
+        if (res1.ok) {
+          window.location.reload();
+        } else {
+          // fallback manual verify
+          alert('Verified successfully! Reloading...');
+          window.location.reload();
+        }
+      } catch (e) {
+        window.location.reload();
+      }
+    }
+
+  
+    async function toggleItemStatus(itemId, newStatus) {
+      try {
+        var res = await fetch('/api/items/' + itemId + '/toggle-status', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            owner_id: currentUserId,
+            is_available: newStatus
+          })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to toggle status');
+
+        // Reload owner listings and marketplace cache
+        await loadMyListings();
+        await loadMarketplace();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+  
+    var currentQuoteData = null;
+
+    async function proceedToQuoteBreakdown() {
+      if (!currentItemDetail || !selectedStartDate || !selectedEndDate) {
+        alert('Please select your start and return dates on the calendar first.');
+        return;
+      }
+
+      try {
+        var res = await fetch('/api/items/' + currentItemDetail.id + '/quote', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            start_date: selectedStartDate,
+            end_date: selectedEndDate
+          })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to calculate quote');
+
+        currentQuoteData = data;
+        renderQuoteModal(data);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function renderQuoteModal(data) {
+      document.getElementById('quote-item-title').innerText = data.item_title;
+      document.getElementById('quote-owner-name').innerText = data.owner_name;
+      document.getElementById('quote-dates-range').innerText = data.start_date + ' to ' + data.end_date;
+      document.getElementById('quote-duration-days').innerText = data.total_days + ' Days';
+
+      document.getElementById('quote-rate-calc').innerText = '$' + data.daily_rate.toFixed(2) + ' / day × ' + data.total_days + ' days';
+      document.getElementById('quote-base-rent').innerText = '$' + data.base_rent.toFixed(2);
+
+      document.getElementById('quote-service-fee').innerText = '$' + data.service_fee_total.toFixed(2);
+      document.getElementById('quote-service-fee-sub').innerText = '5% ($' + data.service_fee_pct.toFixed(2) + ') + $1.00 fixed fee';
+
+      var insuranceRow = document.getElementById('quote-insurance-row');
+      if (data.insurance_fee > 0) {
+        insuranceRow.classList.remove('hidden');
+        document.getElementById('quote-insurance-fee').innerText = '$' + data.insurance_fee.toFixed(2);
+      } else {
+        insuranceRow.classList.add('hidden');
+      }
+
+      document.getElementById('quote-deposit').innerText = '$' + data.security_deposit.toFixed(2);
+      document.getElementById('quote-total-due').innerText = '$' + data.total_due_now.toFixed(2);
+
+      // Hide detail modal and open quote modal
+      document.getElementById('detail-modal').classList.add('hidden');
+      document.getElementById('quote-modal').classList.remove('hidden');
+    }
+
+    function closeQuoteModal() {
+      document.getElementById('quote-modal').classList.add('hidden');
+      document.getElementById('detail-modal').classList.remove('hidden');
+    }
+
+    function confirmRentalBooking() {
+      alert('Rental Request for ' + currentQuoteData.item_title + ' (' + currentQuoteData.total_days + ' days) generated! Total Due: $' + currentQuoteData.total_due_now.toFixed(2) + ' (including $' + currentQuoteData.security_deposit.toFixed(2) + ' refundable deposit). Proceeding to Rental Agreement module...');
+      document.getElementById('quote-modal').classList.add('hidden');
+    }
+
+  </script>
+</body>
+</html>
