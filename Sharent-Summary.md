@@ -548,6 +548,17 @@ cd /config/Desktop/BuildWithGemini/sharent-app
   - Extended [`test_owner_discretionary_deposit.py`](file:///config/Desktop/BuildWithGemini/sharent-app/test_owner_discretionary_deposit.py) with `test_owner_manual_deposit_adjustment_and_waiver` verifying permission protection, custom adjustment calculation, 100% waiver, and renter rental feed reflection.
   - **All 22 test suites passed 100%** (`22 passed in 32.03s`).
 
+
+### 22.3 UI / UX Enhancements & Real-Time Discretionary Feedback (Completed)
+- **Interactive Agreement Cards**:
+  - Agreements now display dynamic badges:
+    - `🛡️ Deposit Waived ($0.00)` in emerald green for waived deposits.
+    - `🏷️ X% Deposit Discount` in purple for partial reductions.
+  - Explanatory reasons (e.g. *"Security Deposit 100% Waived by Owner (Neighbor courtesy)"* or *"50% Deposit Reduction Applied! Highly rated community renter"*) are rendered directly on the rental card with informational icons.
+  - Owners have quick-action access via the **Adjust Deposit** button on pending rentals.
+- **Mobile Responsive Design**:
+  - Modal layouts, radio action buttons, input fields, and rental agreement action buttons are fully optimized with touch targets for desktop and mobile viewports.
+
 ## 7. Recommended Next Steps
 
 1. **In-App Messaging & Real-Time Chat (Module 14)**:

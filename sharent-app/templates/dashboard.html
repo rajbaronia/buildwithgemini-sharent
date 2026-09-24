@@ -3017,14 +3017,28 @@
             actionBtn = '<div class="flex items-center space-x-2"><span class="text-xs text-emerald-700 font-bold"><i class="fa-solid fa-check mr-1"></i> Escrow Released</span>' + reviewBtn + '</div>';
           }
 
+          var depositBadge = '';
+          if (r.security_deposit === 0.0 && r.original_security_deposit > 0) {
+            depositBadge = '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-shield-halved mr-1 text-emerald-600"></i> Deposit Waived ($0.00)</span>';
+          } else if (r.deposit_discount_pct > 0) {
+            depositBadge = '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200"><i class="fa-solid fa-tag mr-1 text-purple-600"></i> ' + r.deposit_discount_pct + '% Deposit Discount</span>';
+          }
+
+          var depositReasonHtml = '';
+          if (r.deposit_evaluation_reason) {
+            depositReasonHtml = '<div class="mt-1 flex items-center space-x-1.5 text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg max-w-fit"><i class="fa-solid fa-circle-info text-brand-500"></i><span>' + r.deposit_evaluation_reason + '</span></div>';
+          }
+
           out += '<div class="p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white shadow-sm">';
-          out += '  <div>';
-          out += '    <div class="flex items-center space-x-2 mb-1">';
+          out += '  <div class="flex-1">';
+          out += '    <div class="flex flex-wrap items-center gap-1.5 mb-1">';
           out += '      <strong class="font-mono text-xs text-brand-700">' + r.agreement_code + '</strong>';
           out += '      ' + statusBadge;
+          out += '      ' + depositBadge;
           out += '    </div>';
           out += '    <h4 class="text-xs font-black text-slate-900">' + r.item_title + '</h4>';
-          out += '    <p class="text-[11px] text-slate-500 mt-0.5">' + (currentRole === 'owner' ? 'Renter: <strong>' + r.renter_name + '</strong>' : 'Owner: <strong>' + r.owner_name + '</strong>') + ' &bull; ' + r.start_date + ' to ' + r.end_date + ' (' + r.total_days + ' days) &bull; Total: $' + r.total_amount.toFixed(2) + ' (Deposit: $' + r.security_deposit.toFixed(2) + ')</p>';
+          out += '    <p class="text-[11px] text-slate-500 mt-0.5">' + (currentRole === 'owner' ? 'Renter: <strong>' + r.renter_name + '</strong>' : 'Owner: <strong>' + r.owner_name + '</strong>') + ' &bull; ' + r.start_date + ' to ' + r.end_date + ' (' + r.total_days + ' days) &bull; Total: <strong>$' + r.total_amount.toFixed(2) + '</strong> (Deposit: $' + r.security_deposit.toFixed(2) + ')</p>';
+          out += '    ' + depositReasonHtml;
           out += '  </div>';
           var otherName = currentRole === 'owner' ? r.renter_name.replace(/'/g, "\\'") : r.owner_name.replace(/'/g, "\\'");
           var chatBtn = '<button onclick="openChatModal(' + r.agreement_id + ', \'' + otherName + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer flex items-center space-x-1"><i class="fa-solid fa-comments text-emerald-600"></i><span>Chat</span></button>';
