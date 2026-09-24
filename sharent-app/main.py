@@ -48,7 +48,8 @@ from schemas import (
     UserWalletResponse,
     WalletTransactionResponse,
     WithdrawalRequest,
-    ItemCriteriaBreakdown,
+    WalletDepositRequest,
+    WalletDepositResponse,
 )
 
 app = FastAPI(title="SHARENT Marketplace")
@@ -1231,6 +1232,8 @@ def get_user_wallet(user_id: int, db: Session = Depends(get_db)):
             transaction_type=t.transaction_type,
             balance_type=t.balance_type,
             amount=t.amount,
+            payment_channel=t.payment_channel,
+            external_reference=t.external_reference,
             description=t.description,
             created_at=t.created_at
         ) for t in txs
@@ -1242,6 +1245,70 @@ def get_user_wallet(user_id: int, db: Session = Depends(get_db)):
         promotional_credit_balance=round(wallet.promotional_credit_balance, 2),
         withdrawable_cash_balance=round(wallet.withdrawable_cash_balance, 2),
         transactions=tx_list
+    )
+
+
+
+@app.post("/api/wallet/deposit", response_model=WalletDepositResponse)
+def deposit_funds(payload: WalletDepositRequest, db: Session = Depends(get_db)):
+    wallet = get_or_create_user_wallet(payload.user_id, db)
+
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Deposit amount must be greater than $0.00.")
+
+    valid_channels = ["bank_account", "google_pay", "paypal", "venmo"]
+    if payload.channel not in valid_channels:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported deposit channel '{payload.channel}'. Supported: {', '.join(valid_channels)}"
+        )
+
+    # Channel-specific validation & reference code generation
+    channel_prefix_map = {
+        "bank_account": "ACH",
+        "google_pay": "GPAY",
+        "paypal": "PP",
+        "venmo": "VENMO"
+    }
+    prefix = channel_prefix_map.get(payload.channel, "DEP")
+    ref_code = f"DEP-{prefix}-{random.randint(100000, 999999)}"
+
+    channel_name_map = {
+        "bank_account": "Bank Account (ACH)",
+        "google_pay": "Google Pay",
+        "paypal": "PayPal",
+        "venmo": "Venmo"
+    }
+    display_channel = channel_name_map.get(payload.channel, payload.channel)
+    details_str = f" ({payload.channel_details})" if payload.channel_details else ""
+    description = f"Deposit via {display_channel}{details_str} [{ref_code}]"
+
+    # Deposited real money increases withdrawable cash balance
+    wallet.withdrawable_cash_balance = round(wallet.withdrawable_cash_balance + payload.amount, 2)
+
+    tx = WalletTransaction(
+        wallet_id=wallet.id,
+        user_id=payload.user_id,
+        transaction_type="deposit",
+        balance_type="withdrawable_cash",
+        amount=payload.amount,
+        payment_channel=payload.channel,
+        external_reference=ref_code,
+        description=description,
+        created_at=datetime.utcnow()
+    )
+    db.add(tx)
+    db.commit()
+    db.refresh(wallet)
+
+    return WalletDepositResponse(
+        success=True,
+        deposit_reference=ref_code,
+        amount=payload.amount,
+        channel=payload.channel,
+        new_total_balance=wallet.total_balance,
+        new_cash_balance=wallet.withdrawable_cash_balance,
+        message=f"Successfully deposited ${payload.amount:.2f} via {display_channel}! Your wallet has been credited."
     )
 
 

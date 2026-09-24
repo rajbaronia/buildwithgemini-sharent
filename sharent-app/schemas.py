@@ -327,8 +327,25 @@ class WalletTransactionResponse(BaseModel):
     transaction_type: str
     balance_type: str
     amount: float
+    payment_channel: Optional[str] = None
+    external_reference: Optional[str] = None
     description: str
     created_at: datetime
+
+class WalletDepositRequest(BaseModel):
+    user_id: int
+    amount: float
+    channel: str  # bank_account, google_pay, paypal, venmo
+    channel_details: Optional[str] = None  # e.g., account last4, email, handle
+
+class WalletDepositResponse(BaseModel):
+    success: bool
+    deposit_reference: str
+    amount: float
+    channel: str
+    new_total_balance: float
+    new_cash_balance: float
+    message: str
 
 class UserWalletResponse(BaseModel):
     user_id: int

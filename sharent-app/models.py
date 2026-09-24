@@ -244,9 +244,11 @@ class WalletTransaction(Base):
     wallet_id = Column(Integer, ForeignKey('user_wallets.id'), nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     agreement_id = Column(Integer, ForeignKey('rental_agreements.id'), nullable=True)
-    transaction_type = Column(String, nullable=False)  # signup_bonus, rental_payment, owner_earning, withdrawal
+    transaction_type = Column(String, nullable=False)  # signup_bonus, rental_payment, owner_earning, withdrawal, deposit
     balance_type = Column(String, nullable=False)      # promotional_credit, withdrawable_cash
     amount = Column(Float, nullable=False)
+    payment_channel = Column(String, nullable=True)    # bank_account, google_pay, paypal, venmo, sharent_internal
+    external_reference = Column(String, nullable=True) # e.g. DEP-GPAY-XXXX, DEP-ACH-XXXX
     description = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

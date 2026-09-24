@@ -462,87 +462,196 @@
   
   <!-- ==================== SHARENT WALLET & CREDITS MODAL ==================== -->
   <div id="wallet-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      <!-- Modal Header -->
       <div class="flex items-start justify-between pb-4 border-b border-slate-100">
         <div class="flex items-center space-x-3">
-          <div class="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-2xl shadow-md">
             <i class="fa-solid fa-wallet"></i>
           </div>
           <div>
-            <h3 class="text-base font-black text-slate-900">Sharent Credits &amp; Wallet</h3>
-            <p class="text-xs text-slate-500">Sign-up bonuses, rental credits &amp; earnings</p>
+            <h3 class="text-lg font-black text-slate-900">Sharent Wallet &amp; Balances</h3>
+            <p class="text-xs text-slate-500 font-medium">Deposit funds, manage earnings, and view transaction history</p>
           </div>
         </div>
-        <button type="button" onclick="closeWalletModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
-          <i class="fa-solid fa-xmark"></i>
+        <button type="button" onclick="closeWalletModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
 
-      <!-- Balance Cards Grid -->
-      <div class="grid grid-cols-2 gap-3 mt-4">
+      <!-- Balance Cards Overview (3 Columns) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
         <!-- Total Available Marketplace Credit -->
-        <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80">
-          <div class="text-[10px] uppercase font-bold text-emerald-800 tracking-wider">Total Credit Balance</div>
-          <div id="wallet-modal-total" class="text-2xl font-black text-emerald-700 mt-1">$20.00</div>
-          <p class="text-[10px] text-emerald-600/90 mt-1 font-medium">Valid for Rent &amp; Service Fees</p>
+        <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-sm">
+          <div class="text-[10px] uppercase font-bold text-emerald-100 tracking-wider">Total Balance</div>
+          <div id="wallet-modal-total" class="text-2xl font-black mt-1">$20.00</div>
+          <p class="text-[10px] text-emerald-100/90 mt-1 font-medium">All Available Funds</p>
         </div>
 
-        <!-- Withdrawable Cash -->
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+        <!-- Real Cash / Deposited Funds (Withdrawable) -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm">
           <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Withdrawable Cash</div>
-          <div id="wallet-modal-cash" class="text-2xl font-black text-slate-800 mt-1">$0.00</div>
-          <p class="text-[10px] text-slate-500 mt-1 font-medium">Earned from real cash rentals</p>
+          <div id="wallet-modal-cash" class="text-2xl font-black text-slate-900 mt-1">$0.00</div>
+          <p class="text-[10px] text-emerald-600 font-semibold mt-1">Deposits &amp; Cash Earnings</p>
+        </div>
+
+        <!-- Promotional Bonus (Non-Withdrawable) -->
+        <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 shadow-sm">
+          <div class="text-[10px] uppercase font-bold text-amber-700 tracking-wider">Promo Credits</div>
+          <div id="wallet-modal-promo" class="text-2xl font-black text-amber-900 mt-1">$20.00</div>
+          <p class="text-[10px] text-amber-700 mt-1 font-medium">Usage &amp; Service Fees Only</p>
         </div>
       </div>
 
-      <!-- Promotional Bonus Alert -->
-      <div class="mt-3 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start space-x-2.5">
-        <i class="fa-solid fa-circle-info text-amber-600 mt-0.5 text-sm"></i>
-        <div class="text-[11px] leading-relaxed">
-          <strong>Promotional Bonus Policy:</strong> Sign-up bonuses and earnings funded by promotional credits are non-withdrawable to external accounts (PayPal / Bank / Venmo) and can only be used to rent equipment on Sharent.
-        </div>
-      </div>
-
-      <!-- Payout Withdrawal Form -->
-      <div class="mt-4 p-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 space-y-3">
-        <h4 class="text-xs font-black text-slate-800 flex items-center justify-between">
-          <span><i class="fa-brands fa-paypal text-indigo-600 mr-1.5"></i> Withdraw Cash Earnings</span>
-          <span class="text-[10px] text-slate-400 font-normal">Real cash earnings only</span>
-        </h4>
-        
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-600 mb-1">Destination</label>
-            <select id="withdraw-destination" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none">
-              <option value="paypal">PayPal</option>
-              <option value="bank_transfer">Direct Bank Transfer</option>
-              <option value="venmo">Venmo</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-600 mb-1">Amount ($)</label>
-            <input type="number" id="withdraw-amount" min="1" step="0.01" placeholder="e.g. 25.00" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none">
-          </div>
-          <div class="col-span-2">
-            <label class="block text-[10px] font-bold text-slate-600 mb-1">Account Email / Username / Routing #</label>
-            <input type="text" id="withdraw-account" placeholder="e.g. user@paypal.com" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none">
-          </div>
-        </div>
-
-        <button onclick="submitWithdrawal()" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer shadow-sm">
-          Withdraw Available Cash
+      <!-- Action Tabs: Deposit Funds vs Withdraw Cash -->
+      <div class="mt-5 border-b border-slate-200 flex space-x-6 text-xs font-bold">
+        <button id="tab-btn-deposit" onclick="switchWalletTab('deposit')" class="pb-2.5 border-b-2 border-emerald-600 text-emerald-700 flex items-center space-x-1.5 cursor-pointer">
+          <i class="fa-solid fa-circle-plus"></i>
+          <span>Deposit Funds</span>
         </button>
-        <div id="withdraw-feedback" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
+        <button id="tab-btn-withdraw" onclick="switchWalletTab('withdraw')" class="pb-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 cursor-pointer">
+          <i class="fa-solid fa-arrow-up-from-bracket"></i>
+          <span>Withdraw Cash</span>
+        </button>
+        <button id="tab-btn-history" onclick="switchWalletTab('history')" class="pb-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 cursor-pointer">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Transaction History</span>
+        </button>
       </div>
 
-      <!-- Ledger Transactions History -->
-      <div class="mt-4">
-        <h4 class="text-xs font-black text-slate-800 mb-2 flex items-center justify-between">
-          <span>Ledger &amp; Bonus Activity</span>
-          <span class="text-[10px] text-slate-400 font-normal">Audit trail</span>
-        </h4>
-        <div id="wallet-tx-list" class="space-y-2 max-h-40 overflow-y-auto pr-1 text-xs">
-          <div class="text-center py-3 text-slate-400 italic text-[11px]">Loading ledger activity...</div>
+      <!-- TAB 1: DEPOSIT FUNDS (Bank, Google Pay, PayPal, Venmo) -->
+      <div id="wallet-panel-deposit" class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">1. Select Payment Channel</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <!-- Bank Account -->
+            <button type="button" onclick="selectDepositChannel('bank_account')" id="chan-bank_account" class="chan-btn p-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50/40 text-center transition cursor-pointer flex flex-col items-center">
+              <i class="fa-solid fa-building-columns text-emerald-700 text-lg mb-1"></i>
+              <span class="text-xs font-black text-slate-900">Bank (ACH)</span>
+              <span class="text-[10px] text-slate-500">Direct debit</span>
+            </button>
+            <!-- Google Pay -->
+            <button type="button" onclick="selectDepositChannel('google_pay')" id="chan-google_pay" class="chan-btn p-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-center transition cursor-pointer flex flex-col items-center">
+              <i class="fa-brands fa-google-pay text-slate-800 text-2xl mb-0.5"></i>
+              <span class="text-xs font-black text-slate-900">Google Pay</span>
+              <span class="text-[10px] text-slate-500">Instant 1-tap</span>
+            </button>
+            <!-- PayPal -->
+            <button type="button" onclick="selectDepositChannel('paypal')" id="chan-paypal" class="chan-btn p-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-center transition cursor-pointer flex flex-col items-center">
+              <i class="fa-brands fa-paypal text-indigo-600 text-lg mb-1"></i>
+              <span class="text-xs font-black text-slate-900">PayPal</span>
+              <span class="text-[10px] text-slate-500">Wallet / Card</span>
+            </button>
+            <!-- Venmo -->
+            <button type="button" onclick="selectDepositChannel('venmo')" id="chan-venmo" class="chan-btn p-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-center transition cursor-pointer flex flex-col items-center">
+              <i class="fa-solid fa-v text-sky-500 text-lg mb-1 font-black"></i>
+              <span class="text-xs font-black text-slate-900">Venmo</span>
+              <span class="text-[10px] text-slate-500">Instant app</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Channel Input Details -->
+        <div id="channel-inputs-container" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+          <div id="input-group-bank_account" class="space-y-2 text-xs">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">Routing Number (9 Digits)</label>
+                <input type="text" id="dep-bank-routing" value="121000358" placeholder="e.g. 121000358" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">Account Number</label>
+                <input type="text" id="dep-bank-account" value="••••9876" placeholder="e.g. 987654321" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none">
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-500"><i class="fa-solid fa-lock text-slate-400 mr-1"></i> Secured 256-bit encrypted ACH transfer authorization</p>
+          </div>
+
+          <div id="input-group-google_pay" class="hidden text-xs">
+            <div class="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <i class="fa-brands fa-google text-slate-600"></i>
+                <span class="font-bold text-slate-800">Connected Google Pay Account</span>
+              </div>
+              <span class="text-[11px] font-mono text-slate-500">Linked (Visa ••4242)</span>
+            </div>
+          </div>
+
+          <div id="input-group-paypal" class="hidden text-xs">
+            <label class="block text-[10px] font-bold text-slate-600 mb-1">PayPal Account Email</label>
+            <input type="email" id="dep-paypal-email" value="user_paypal@example.com" placeholder="e.g. you@example.com" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none">
+          </div>
+
+          <div id="input-group-venmo" class="hidden text-xs">
+            <label class="block text-[10px] font-bold text-slate-600 mb-1">Venmo Username (@handle)</label>
+            <input type="text" id="dep-venmo-handle" value="@YourVenmoHandle" placeholder="e.g. @JaneDoe" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none">
+          </div>
+        </div>
+
+        <!-- Quick Amount Selection -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">2. Choose Deposit Amount</label>
+          <div class="grid grid-cols-4 gap-2 mb-2">
+            <button type="button" onclick="setDepositAmount(15)" class="py-2 rounded-xl border border-slate-200 hover:border-emerald-500 text-xs font-bold text-slate-800 hover:bg-emerald-50 cursor-pointer transition">$15</button>
+            <button type="button" onclick="setDepositAmount(25)" class="py-2 rounded-xl border border-slate-200 hover:border-emerald-500 text-xs font-bold text-slate-800 hover:bg-emerald-50 cursor-pointer transition">$25</button>
+            <button type="button" onclick="setDepositAmount(50)" class="py-2 rounded-xl border border-slate-200 hover:border-emerald-500 text-xs font-bold text-slate-800 hover:bg-emerald-50 cursor-pointer transition">$50</button>
+            <button type="button" onclick="setDepositAmount(100)" class="py-2 rounded-xl border border-slate-200 hover:border-emerald-500 text-xs font-bold text-slate-800 hover:bg-emerald-50 cursor-pointer transition">$100</button>
+          </div>
+          <div class="relative">
+            <span class="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
+            <input type="number" id="deposit-amount-input" min="1" step="0.01" value="25.00" placeholder="Custom amount" class="w-full pl-7 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <button type="button" onclick="submitDeposit()" id="btn-submit-deposit" class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm cursor-pointer shadow-md transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-arrow-down-to-bracket"></i>
+          <span>Deposit Funds to Sharent Wallet</span>
+        </button>
+        <div id="deposit-feedback" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+      </div>
+
+      <!-- TAB 2: WITHDRAW CASH -->
+      <div id="wallet-panel-withdraw" class="hidden mt-4 space-y-3">
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 mb-1">Destination</label>
+              <select id="withdraw-destination" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none">
+                <option value="bank_transfer">Direct Bank Transfer (ACH)</option>
+                <option value="paypal">PayPal</option>
+                <option value="venmo">Venmo</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 mb-1">Amount ($)</label>
+              <input type="number" id="withdraw-amount" min="1" step="0.01" placeholder="e.g. 25.00" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-[10px] font-bold text-slate-600 mb-1">Destination Account (Email, Routing/Account #, or Venmo @handle)</label>
+              <input type="text" id="withdraw-account" placeholder="e.g. user@paypal.com or @handle" class="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none">
+            </div>
+          </div>
+
+          <button onclick="submitWithdrawal()" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer shadow-sm">
+            Withdraw Available Cash
+          </button>
+          <div id="withdraw-feedback" class="hidden p-2.5 rounded-xl text-xs font-semibold"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: TRANSACTION HISTORY AUDIT FEED -->
+      <div id="wallet-panel-history" class="hidden mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-black text-slate-800">Ledger &amp; Transaction History</span>
+          <div class="flex space-x-1 text-[10px]">
+            <button onclick="filterWalletTx('all')" class="px-2 py-0.5 rounded-md bg-slate-200 font-bold text-slate-800 cursor-pointer">All</button>
+            <button onclick="filterWalletTx('deposit')" class="px-2 py-0.5 rounded-md bg-slate-100 font-medium text-slate-600 cursor-pointer hover:bg-slate-200">Deposits</button>
+            <button onclick="filterWalletTx('rental_payment')" class="px-2 py-0.5 rounded-md bg-slate-100 font-medium text-slate-600 cursor-pointer hover:bg-slate-200">Payments</button>
+            <button onclick="filterWalletTx('owner_earning')" class="px-2 py-0.5 rounded-md bg-slate-100 font-medium text-slate-600 cursor-pointer hover:bg-slate-200">Earnings</button>
+          </div>
+        </div>
+        <div id="wallet-tx-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs">
+          <div class="text-center py-4 text-slate-400 italic text-[11px]">Loading ledger transactions...</div>
         </div>
       </div>
     </div>
@@ -2524,6 +2633,593 @@
       document.getElementById('card-year').value = '28';
       document.getElementById('card-cvv').value = '424';
       document.getElementById('card-zip').value = '94583';
+    }
+
+    async function submitPayment() {
+      var btn = document.getElementById('btn-submit-payment');
+      var errBox = document.getElementById('payment-error-box');
+      errBox.classList.add('hidden');
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Authorizing Card...';
+
+        var res = await fetch('/api/checkout/pay', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            agreement_id: activeAgreementData.id,
+            renter_id: currentUserId,
+            payment_method: 'credit_card',
+            card_number: document.getElementById('card-number').value,
+            exp_month: document.getElementById('card-month').value,
+            exp_year: document.getElementById('card-year').value,
+            cvv: document.getElementById('card-cvv').value,
+            billing_zip: document.getElementById('card-zip').value,
+            apply_credit: true
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Payment failed');
+
+        // Populate Receipt Modal
+        document.getElementById('rec-handover-pin').innerText = data.handover_pin;
+        document.getElementById('rec-txn-code').innerText = data.transaction_code;
+        document.getElementById('rec-agr-code').innerText = data.agreement_code;
+        document.getElementById('rec-item-title').innerText = data.item_title;
+        document.getElementById('rec-owner-name').innerText = data.owner_name;
+        document.getElementById('rec-dates').innerText = data.start_date + ' to ' + data.end_date + ' (' + data.total_days + ' days)';
+        document.getElementById('rec-amount-charged').innerText = '$' + data.amount_charged.toFixed(2);
+        document.getElementById('rec-escrow-held').innerText = '$' + data.escrow_deposit_held.toFixed(2);
+        document.getElementById('rec-total-paid').innerText = '$' + data.total_paid.toFixed(2);
+
+        document.getElementById('checkout-modal').classList.add('hidden');
+        document.getElementById('receipt-modal').classList.remove('hidden');
+
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i><span>' + document.getElementById('btn-pay-text').innerText + '</span>';
+      }
+    }
+
+  
+    async function loadUserRentals() {
+      var container = document.getElementById('user-rentals-container');
+      if (!container) return;
+
+      try {
+        var res = await fetch('/api/rentals/user/' + currentUserId + '?role=' + currentRole);
+        var rentals = await res.json();
+
+        if (!rentals || rentals.length === 0) {
+          container.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs"><i class="fa-solid fa-box-open mr-1"></i> No active or past rentals found for this account.</div>';
+          return;
+        }
+
+        var out = '';
+        rentals.forEach(function(r) {
+          var statusBadge = '';
+          var actionBtn = '';
+
+          if (r.status === 'confirmed') {
+            statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800"><i class="fa-solid fa-clock mr-1"></i> Awaiting Pickup</span>';
+            if (currentRole === 'owner') {
+              actionBtn = '<button onclick="openHandoverModal(' + r.agreement_id + ', \'' + r.agreement_code + '\', \'' + r.renter_name.replace(/'/g, "\\'") + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-key mr-1"></i> Verify Handover</button>';
+            } else {
+              actionBtn = '<button onclick="alert(\'Your Pickup PIN is: ' + (r.handover_pin || 'Pending') + '\')" class="px-3 py-1.5 rounded-xl border border-brand-300 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-xs cursor-pointer"><i class="fa-solid fa-key mr-1"></i> Show PIN: ' + (r.handover_pin || '••••') + '</button>';
+            }
+          } else if (r.status === 'active') {
+            statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800"><i class="fa-solid fa-bolt mr-1"></i> Active Rental</span>';
+            if (currentRole === 'owner') {
+              actionBtn = '<button onclick="openInspectionModal(' + r.agreement_id + ', \'' + r.agreement_code + '\', \'' + r.renter_name.replace(/'/g, "\\'") + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\', ' + r.security_deposit + ')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-clipboard-check mr-1"></i> Inspect & Release Deposit</button>';
+            } else {
+              actionBtn = '<span class="text-xs text-slate-500 font-medium">Rental in progress (Return by ' + r.end_date + ')</span>';
+            }
+          } else if (r.status === 'completed') {
+            statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800"><i class="fa-solid fa-circle-check mr-1"></i> Completed &amp; Refunded</span>';
+            var reviewBtn = r.has_reviewed ? 
+              '<span class="text-xs text-slate-400 font-semibold flex items-center"><i class="fa-solid fa-star text-amber-400 mr-1"></i> Reviewed</span>' :
+              '<button onclick="openReviewModal(' + r.agreement_id + ', \'' + r.agreement_code + '\', \'' + (currentRole === 'owner' ? r.renter_name.replace(/'/g, "\\'") : r.owner_name.replace(/'/g, "\\'")) + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-star mr-1"></i> Leave Review</button>';
+
+            actionBtn = '<div class="flex items-center space-x-2"><span class="text-xs text-emerald-700 font-bold"><i class="fa-solid fa-check mr-1"></i> Escrow Released</span>' + reviewBtn + '</div>';
+          }
+
+          out += '<div class="p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white shadow-sm">';
+          out += '  <div>';
+          out += '    <div class="flex items-center space-x-2 mb-1">';
+          out += '      <strong class="font-mono text-xs text-brand-700">' + r.agreement_code + '</strong>';
+          out += '      ' + statusBadge;
+          out += '    </div>';
+          out += '    <h4 class="text-xs font-black text-slate-900">' + r.item_title + '</h4>';
+          out += '    <p class="text-[11px] text-slate-500 mt-0.5">' + (currentRole === 'owner' ? 'Renter: <strong>' + r.renter_name + '</strong>' : 'Owner: <strong>' + r.owner_name + '</strong>') + ' &bull; ' + r.start_date + ' to ' + r.end_date + ' (' + r.total_days + ' days) &bull; Total: $' + r.total_amount.toFixed(2) + ' (Deposit: $' + r.security_deposit.toFixed(2) + ')</p>';
+          out += '  </div>';
+          out += '  <div class="flex items-center space-x-2">';
+          out += '    ' + actionBtn;
+          out += '  </div>';
+          out += '</div>';
+        });
+
+        container.innerHTML = out;
+      } catch (e) {
+        container.innerHTML = '<div class="text-center py-4 text-rose-500 text-xs">Failed to load rentals.</div>';
+      }
+    }
+
+    function openHandoverModal(agrId, agrCode, renterName, itemTitle) {
+      document.getElementById('hv-agreement-id').value = agrId;
+      document.getElementById('hv-agr-code').innerText = agrCode;
+      document.getElementById('hv-renter-name').innerText = renterName;
+      document.getElementById('hv-item-title').innerText = itemTitle;
+      document.getElementById('hv-pin-input').value = '';
+      document.getElementById('hv-notes').value = '';
+      document.getElementById('hv-error-box').classList.add('hidden');
+      document.getElementById('handover-verify-modal').classList.remove('hidden');
+    }
+
+    function closeHandoverModal() {
+      document.getElementById('handover-verify-modal').classList.add('hidden');
+    }
+
+    async function submitHandoverVerification() {
+      var agrId = parseInt(document.getElementById('hv-agreement-id').value);
+      var pin = document.getElementById('hv-pin-input').value.trim();
+      var notes = document.getElementById('hv-notes').value.trim();
+      var btn = document.getElementById('btn-submit-handover');
+      var errBox = document.getElementById('hv-error-box');
+
+      try {
+        btn.disabled = true;
+        btn.innerText = 'Verifying PIN...';
+        errBox.classList.add('hidden');
+
+        var res = await fetch('/api/rentals/verify-handover', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            agreement_id: agrId,
+            owner_id: currentUserId,
+            entered_pin: pin,
+            pickup_notes: notes
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Handover verification failed');
+
+        alert(data.message);
+        closeHandoverModal();
+        loadUserRentals();
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Verify & Release Item';
+      }
+    }
+
+    function openInspectionModal(agrId, agrCode, renterName, itemTitle, depositHeld) {
+      document.getElementById('ri-agreement-id').value = agrId;
+      document.getElementById('ri-agr-code').innerText = agrCode;
+      document.getElementById('ri-renter-name').innerText = renterName;
+      document.getElementById('ri-item-title').innerText = itemTitle;
+      document.getElementById('ri-deposit-held').innerText = '$' + depositHeld.toFixed(2);
+      document.getElementById('ri-notes').value = '';
+      document.getElementById('ri-error-box').classList.add('hidden');
+      document.getElementById('return-inspect-modal').classList.remove('hidden');
+    }
+
+    function closeInspectionModal() {
+      document.getElementById('return-inspect-modal').classList.add('hidden');
+    }
+
+    async function submitReturnInspection() {
+      var agrId = parseInt(document.getElementById('ri-agreement-id').value);
+      var cond = document.getElementById('ri-condition').value;
+      var acc = document.getElementById('ri-accessories').checked;
+      var cleaned = document.getElementById('ri-cleaned').checked;
+      var notes = document.getElementById('ri-notes').value.trim();
+      var btn = document.getElementById('btn-submit-inspection');
+      var errBox = document.getElementById('ri-error-box');
+
+      try {
+        btn.disabled = true;
+        btn.innerText = 'Releasing Escrow...';
+        errBox.classList.add('hidden');
+
+        var res = await fetch('/api/rentals/return-inspection', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            agreement_id: agrId,
+            owner_id: currentUserId,
+            condition_on_return: cond,
+            all_accessories_returned: acc,
+            cleaned_properly: cleaned,
+            inspection_notes: notes
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Return inspection failed');
+
+        alert(data.message);
+        closeInspectionModal();
+        loadUserRentals();
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Confirm & Release Deposit';
+      }
+    }
+
+    // Call loadUserRentals on page load
+    setTimeout(loadUserRentals, 300);
+
+  
+    function setReviewRating(rating) {
+      document.getElementById('rev-rating-value').value = rating;
+      var stars = document.getElementById('star-rating-container').children;
+      for (var i = 0; i < 5; i++) {
+        if (i < rating) {
+          stars[i].className = 'fa-solid fa-star';
+        } else {
+          stars[i].className = 'fa-regular fa-star';
+        }
+      }
+      var labels = [
+        '1 Star – Poor Experience',
+        '2 Stars – Below Expectations',
+        '3 Stars – Average / Acceptable',
+        '4 Stars – Very Good',
+        '5 Stars – Outstanding Experience'
+      ];
+      document.getElementById('rev-rating-label').innerText = labels[rating - 1];
+    }
+
+    function toggleReviewTag(btn) {
+      if (btn.classList.contains('bg-amber-100')) {
+        btn.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        btn.classList.add('border-slate-200', 'text-slate-600');
+      } else {
+        btn.classList.add('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        btn.classList.remove('border-slate-200', 'text-slate-600');
+      }
+    }
+
+    function openReviewModal(agrId, agrCode, targetName, itemTitle) {
+      document.getElementById('rev-agreement-id').value = agrId;
+      document.getElementById('rev-agr-code').innerText = agrCode;
+      document.getElementById('rev-target-name').innerText = targetName;
+      document.getElementById('rev-item-title').innerText = itemTitle;
+      document.getElementById('rev-comment').value = '';
+      
+      // Toggle role-specific criteria views
+      if (currentRole === 'owner') {
+        document.getElementById('renter-review-fields').classList.add('hidden');
+        document.getElementById('owner-review-fields').classList.remove('hidden');
+      } else {
+        document.getElementById('renter-review-fields').classList.remove('hidden');
+        document.getElementById('owner-review-fields').classList.add('hidden');
+      }
+
+      document.querySelectorAll('.rev-tag').forEach(function(b) {
+        b.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        b.classList.add('border-slate-200', 'text-slate-600');
+      });
+      document.getElementById('rev-error-box').classList.add('hidden');
+      document.getElementById('review-modal').classList.remove('hidden');
+    }
+
+    function closeReviewModal() {
+      document.getElementById('review-modal').classList.add('hidden');
+    }
+
+    async function submitRentalReview() {
+      var agrId = parseInt(document.getElementById('rev-agreement-id').value);
+      var comment = document.getElementById('rev-comment').value.trim();
+      var btn = document.getElementById('btn-submit-review');
+      var errBox = document.getElementById('rev-error-box');
+
+      var selectedTags = [];
+      document.querySelectorAll('.rev-tag.bg-amber-100').forEach(function(b) {
+        selectedTags.push(b.innerText.trim());
+      });
+
+      var payload = {
+        agreement_id: agrId,
+        reviewer_id: currentUserId,
+        comment: comment,
+        tags: selectedTags
+      };
+
+      if (currentRole === 'owner') {
+        payload.renter_communication = parseInt(document.getElementById('rate-renter-comm').value);
+        payload.renter_responsibility = parseInt(document.getElementById('rate-renter-resp').value);
+        payload.renter_friendliness = parseInt(document.getElementById('rate-renter-friendly').value);
+        payload.renter_care_of_item = parseInt(document.getElementById('rate-renter-care').value);
+        payload.renter_return_condition = parseInt(document.getElementById('rate-renter-return').value);
+      } else {
+        payload.item_accuracy = parseInt(document.getElementById('rate-item-accuracy').value);
+        payload.item_condition = parseInt(document.getElementById('rate-item-condition').value);
+        payload.item_ease_of_use = parseInt(document.getElementById('rate-item-ease').value);
+        payload.item_instructions = parseInt(document.getElementById('rate-item-instructions').value);
+        payload.item_value = parseInt(document.getElementById('rate-item-value').value);
+
+        payload.owner_response_time = parseInt(document.getElementById('rate-owner-response').value);
+        payload.owner_communication = parseInt(document.getElementById('rate-owner-comm').value);
+        payload.owner_friendliness = parseInt(document.getElementById('rate-owner-friendly').value);
+        payload.owner_pickup_ease = parseInt(document.getElementById('rate-owner-pickup').value);
+        payload.owner_return_ease = parseInt(document.getElementById('rate-owner-return').value);
+      }
+
+      try {
+        btn.disabled = true;
+        btn.innerText = 'Submitting Review...';
+        errBox.classList.add('hidden');
+
+        var res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Review submission failed');
+
+        alert('Thank you! Your verified review (' + data.rating.toFixed(1) + ' ★) has been published.');
+        closeReviewModal();
+        loadUserRentals();
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Submit Verified Review';
+      }
+    }
+
+  </script>
+</body>
+</html>var currentUserWallet = {total: 20.0, cash: 0.0, promo: 20.0, transactions: []};
+    var activeDepositChannel = 'bank_account';
+    var activeWalletFilter = 'all';
+
+    function switchWalletTab(tab) {
+      document.getElementById('wallet-panel-deposit').classList.add('hidden');
+      document.getElementById('wallet-panel-withdraw').classList.add('hidden');
+      document.getElementById('wallet-panel-history').classList.add('hidden');
+
+      document.getElementById('tab-btn-deposit').className = 'pb-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 cursor-pointer';
+      document.getElementById('tab-btn-withdraw').className = 'pb-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 cursor-pointer';
+      document.getElementById('tab-btn-history').className = 'pb-2.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 cursor-pointer';
+
+      if (tab === 'deposit') {
+        document.getElementById('wallet-panel-deposit').classList.remove('hidden');
+        document.getElementById('tab-btn-deposit').className = 'pb-2.5 border-b-2 border-emerald-600 text-emerald-700 flex items-center space-x-1.5 cursor-pointer';
+      } else if (tab === 'withdraw') {
+        document.getElementById('wallet-panel-withdraw').classList.remove('hidden');
+        document.getElementById('tab-btn-withdraw').className = 'pb-2.5 border-b-2 border-slate-900 text-slate-900 flex items-center space-x-1.5 cursor-pointer';
+      } else if (tab === 'history') {
+        document.getElementById('wallet-panel-history').classList.remove('hidden');
+        document.getElementById('tab-btn-history').className = 'pb-2.5 border-b-2 border-indigo-600 text-indigo-700 flex items-center space-x-1.5 cursor-pointer';
+        renderWalletTransactions();
+      }
+    }
+
+    function selectDepositChannel(chan) {
+      activeDepositChannel = chan;
+      ['bank_account', 'google_pay', 'paypal', 'venmo'].forEach(function(c) {
+        var btn = document.getElementById('chan-' + c);
+        var grp = document.getElementById('input-group-' + c);
+        if (btn) {
+          if (c === chan) {
+            btn.className = 'chan-btn p-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50/40 text-center transition cursor-pointer flex flex-col items-center shadow-sm';
+          } else {
+            btn.className = 'chan-btn p-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-center transition cursor-pointer flex flex-col items-center';
+          }
+        }
+        if (grp) {
+          if (c === chan) grp.classList.remove('hidden');
+          else grp.classList.add('hidden');
+        }
+      });
+    }
+
+    function setDepositAmount(amt) {
+      document.getElementById('deposit-amount-input').value = amt.toFixed(2);
+    }
+
+    async function submitDeposit() {
+      var amt = parseFloat(document.getElementById('deposit-amount-input').value);
+      var btn = document.getElementById('btn-submit-deposit');
+      var fb = document.getElementById('deposit-feedback');
+
+      if (isNaN(amt) || amt <= 0) {
+        fb.className = 'p-3 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 block';
+        fb.innerText = 'Please specify a deposit amount greater than $0.00.';
+        return;
+      }
+
+      var details = '';
+      if (activeDepositChannel === 'bank_account') {
+        var rt = document.getElementById('dep-bank-routing').value.trim();
+        var ac = document.getElementById('dep-bank-account').value.trim();
+        details = 'ACH ' + (ac.length > 4 ? ac.slice(-4) : ac);
+      } else if (activeDepositChannel === 'google_pay') {
+        details = 'Google Pay (Instant Token)';
+      } else if (activeDepositChannel === 'paypal') {
+        details = document.getElementById('dep-paypal-email').value.trim() || 'PayPal Account';
+      } else if (activeDepositChannel === 'venmo') {
+        details = document.getElementById('dep-venmo-handle').value.trim() || 'Venmo Account';
+      }
+
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Processing Deposit...';
+
+        var res = await fetch('/api/wallet/deposit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: currentUserId,
+            amount: amt,
+            channel: activeDepositChannel,
+            channel_details: details
+          })
+        });
+
+        var data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-arrow-down-to-bracket"></i> <span>Deposit Funds to Sharent Wallet</span>';
+
+        if (!res.ok) throw new Error(data.detail || 'Deposit failed');
+
+        fb.className = 'p-3 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800 block';
+        fb.innerHTML = '<i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> ' + data.message + ' <span class="font-mono text-[10px] text-slate-500 block mt-1">Ref: ' + data.deposit_reference + '</span>';
+        loadUserWallet();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-arrow-down-to-bracket"></i> <span>Deposit Funds to Sharent Wallet</span>';
+        fb.className = 'p-3 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 block';
+        fb.innerText = err.message;
+      }
+    }
+
+    function filterWalletTx(type) {
+      activeWalletFilter = type;
+      renderWalletTransactions();
+    }
+
+    function renderWalletTransactions() {
+      var txList = document.getElementById('wallet-tx-list');
+      if (!txList) return;
+
+      var filtered = currentUserWallet.transactions || [];
+      if (activeWalletFilter !== 'all') {
+        filtered = filtered.filter(function(t) { return t.transaction_type === activeWalletFilter; });
+      }
+
+      if (filtered.length === 0) {
+        txList.innerHTML = '<div class="text-center py-6 text-slate-400 italic text-[11px] bg-slate-50 rounded-2xl border border-dashed border-slate-200">No transactions found for selected filter.</div>';
+        return;
+      }
+
+      var iconMap = {
+        'deposit': '<i class="fa-solid fa-arrow-down text-emerald-600"></i>',
+        'signup_bonus': '<i class="fa-solid fa-gift text-amber-500"></i>',
+        'owner_earning': '<i class="fa-solid fa-hand-holding-dollar text-teal-600"></i>',
+        'rental_payment': '<i class="fa-solid fa-cart-shopping text-slate-600"></i>',
+        'withdrawal': '<i class="fa-solid fa-arrow-up text-rose-500"></i>'
+      };
+
+      var out = '';
+      filtered.forEach(function(t) {
+        var isPos = t.amount > 0;
+        var icon = iconMap[t.transaction_type] || '<i class="fa-solid fa-receipt"></i>';
+        var chanBadge = '';
+        if (t.payment_channel) {
+          chanBadge = '<span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200">' + t.payment_channel.replace('_', ' ') + '</span>';
+        }
+
+        out += '<div class="p-3 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition flex items-center justify-between text-xs shadow-sm">';
+        out += '  <div class="flex items-start space-x-2.5">';
+        out += '    <div class="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-sm border border-slate-100 mt-0.5">' + icon + '</div>';
+        out += '    <div>';
+        out += '      <div class="font-bold text-slate-800">' + t.description + chanBadge + '</div>';
+        out += '      <div class="text-[10px] text-slate-400 font-mono mt-0.5">' + new Date(t.created_at).toLocaleString() + ' &bull; ' + (t.balance_type === 'promotional_credit' ? 'Promotional Credit' : 'Cash Funds') + '</div>';
+        out += '    </div>';
+        out += '  </div>';
+        out += '  <div class="font-black text-sm ' + (isPos ? 'text-emerald-600' : 'text-slate-800') + '">' + (isPos ? '+' : '') + '$' + Math.abs(t.amount).toFixed(2) + '</div>';
+        out += '</div>';
+      });
+      txList.innerHTML = out;
+    }
+
+    function loadUserWallet() {
+      fetch('/api/wallet/' + currentUserId)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          currentUserWallet.total = data.total_balance;
+          currentUserWallet.cash = data.withdrawable_cash_balance;
+          currentUserWallet.promo = data.promotional_credit_balance;
+          currentUserWallet.transactions = data.transactions || [];
+
+          var navEl = document.getElementById('nav-wallet-balance');
+          if (navEl) navEl.innerText = '$' + data.total_balance.toFixed(2);
+
+          var modalTotal = document.getElementById('wallet-modal-total');
+          if (modalTotal) modalTotal.innerText = '$' + data.total_balance.toFixed(2);
+
+          var modalCash = document.getElementById('wallet-modal-cash');
+          if (modalCash) modalCash.innerText = '$' + data.withdrawable_cash_balance.toFixed(2);
+
+          var modalPromo = document.getElementById('wallet-modal-promo');
+          if (modalPromo) modalPromo.innerText = '$' + data.promotional_credit_balance.toFixed(2);
+
+          renderWalletTransactions();
+        })
+        .catch(function(e) { console.error('Error loading wallet:', e); });
+    }
+
+    function openWalletModal() {
+      loadUserWallet();
+      switchWalletTab('deposit');
+      var fb = document.getElementById('withdraw-feedback');
+      if (fb) fb.classList.add('hidden');
+      var dfb = document.getElementById('deposit-feedback');
+      if (dfb) dfb.classList.add('hidden');
+      document.getElementById('wallet-modal').classList.remove('hidden');
+    }
+
+    function closeWalletModal() {
+      document.getElementById('wallet-modal').classList.add('hidden');
+    }
+
+    async function submitWithdrawal() {
+      var dest = document.getElementById('withdraw-destination').value;
+      var amt = parseFloat(document.getElementById('withdraw-amount').value);
+      var acct = document.getElementById('withdraw-account').value.trim();
+      var fb = document.getElementById('withdraw-feedback');
+
+      if (isNaN(amt) || amt <= 0) {
+        fb.className = 'p-3 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 block';
+        fb.innerText = 'Please enter a valid withdrawal amount greater than $0.00.';
+        return;
+      }
+      if (!acct) {
+        fb.className = 'p-3 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 block';
+        fb.innerText = 'Please provide your destination account information.';
+        return;
+      }
+
+      try {
+        var res = await fetch('/api/wallet/withdraw', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: currentUserId,
+            amount: amt,
+            destination_type: dest,
+            destination_account: acct
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Withdrawal failed');
+
+        fb.className = 'p-3 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800 block';
+        fb.innerText = data.message;
+        loadUserWallet();
+      } catch (err) {
+        fb.className = 'p-3 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 block';
+        fb.innerText = err.message;
+      }
     }
 
     async function submitPayment() {

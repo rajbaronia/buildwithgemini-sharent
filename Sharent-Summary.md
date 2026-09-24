@@ -272,6 +272,25 @@ rental_reviews (Airbnb-Style Multi-Criteria)
   - Dedicated Wallet & Payout modal with credit vs. cash breakdown, audit history, and cash withdrawal form.
   - Checkout summary automatically reflects credits applied against eligible rental & service fees.
 
+### Module 15: Multi-Channel Wallet Deposits, Balance Overview & Transaction History
+- **Multi-Channel Deposit Support**:
+  - Connect external financial accounts and services to deposit funds directly into the user's Sharent Wallet:
+    1. **Bank Account (ACH / Direct Debit)**: Routing number + account number authorization.
+    2. **Google Pay**: Instant 1-tap biometric/token payment.
+    3. **PayPal**: Linked PayPal account/email authentication.
+    4. **Venmo**: Linked Venmo account/@handle integration.
+- **Deposit Fund Classification (Real Cash Balance)**:
+  - Deposited funds represent genuine real-money payments and are credited to **`withdrawable_cash_balance`**.
+  - Unlike promotional sign-up bonuses, deposited cash can be applied towards all checkout charges (including **Security Deposit** and **Insurance Fee**), or withdrawn back to external bank/PayPal/Venmo accounts.
+- **Comprehensive Account Balance Overview**:
+  - **Total Balance**: Combined spending power across all available funds.
+  - **Withdrawable Cash Balance**: Real cash from external deposits and verified cash rental earnings.
+  - **Promotional Bonus Credits**: Non-withdrawable credits for usage & service fees only.
+- **Full Audit Ledger & Filterable Transaction History**:
+  - Audit trail displaying chronological records of all wallet movements: deposits, sign-up promotions, rental payments, owner net earnings, and cash payouts.
+  - Interactive filter pills to view *All*, *Deposits*, *Payments*, and *Earnings*.
+  - Reference tracking tags (e.g. `DEP-GPAY-XXXXXX`, `DEP-ACH-XXXXXX`, `DEP-PP-XXXXXX`, `DEP-VENMO-XXXXXX`).
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:
@@ -303,6 +322,12 @@ cd /config/Desktop/BuildWithGemini/sharent-app
       - User A rents User B's kayak ($15/day for 2 days = $30). User A applies all $29 credit + $1 PayPal.
       - User B receives net $27 ($30 - 10%), increasing User B's balance to $47.
       - User B attempts to withdraw $47 to PayPal, which is strictly rejected due to non-withdrawable promotional credit rules.
+
+14. `test_wallet_deposits.py`:
+    - Tests multi-channel wallet deposits across Bank Account (ACH), Google Pay, PayPal, and Venmo.
+    - Validates deposit reference codes, instant credit to `withdrawable_cash_balance`, and updated `total_balance`.
+    - Confirms rejection of invalid amounts (<= 0) and unsupported channels.
+    - Validates withdrawing deposited funds back out to external accounts while enforcing non-withdrawable limits on promotional credits.
 
 ## 6. How to Run Locally
 
