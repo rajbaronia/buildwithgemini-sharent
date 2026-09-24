@@ -464,3 +464,32 @@ class DisputeClaimResponse(BaseModel):
     settled_amount_refunded_to_renter: float
     created_at: datetime
     resolved_at: Optional[datetime] = None
+
+
+class ChatMessageSendRequest(BaseModel):
+    agreement_id: int
+    sender_id: int
+    message_text: str = Field(..., min_length=1, max_length=2000)
+    attachment_url: Optional[str] = None
+
+class ChatMessageResponse(BaseModel):
+    id: int
+    agreement_id: int
+    sender_id: int
+    sender_name: str
+    receiver_id: int
+    receiver_name: str
+    message_text: str
+    attachment_url: Optional[str] = None
+    is_read: bool
+    created_at: datetime
+
+class ChatThreadSummary(BaseModel):
+    agreement_id: int
+    agreement_code: str
+    item_title: str
+    other_party_id: int
+    other_party_name: str
+    last_message: Optional[str] = None
+    last_message_time: Optional[datetime] = None
+    unread_count: int

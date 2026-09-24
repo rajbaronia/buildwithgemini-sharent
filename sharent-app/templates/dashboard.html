@@ -3200,6 +3200,104 @@
 
     
     
+    
+    var activeChatInterval = null;
+
+    function openChatModal(agreementId, otherPartyName, itemTitle) {
+      document.getElementById('chat-current-agreement-id').value = agreementId;
+      document.getElementById('chat-modal-title').innerText = otherPartyName || 'Rental Chat';
+      document.getElementById('chat-modal-subtitle').innerText = itemTitle || ('Agreement #AGR-' + agreementId);
+      document.getElementById('chat-modal').classList.remove('hidden');
+
+      loadChatMessages(agreementId);
+      if (activeChatInterval) clearInterval(activeChatInterval);
+      activeChatInterval = setInterval(function() {
+        loadChatMessages(agreementId, false);
+      }, 3000); // Poll real-time every 3s
+    }
+
+    function closeChatModal() {
+      document.getElementById('chat-modal').classList.add('hidden');
+      if (activeChatInterval) clearInterval(activeChatInterval);
+    }
+
+    function loadChatMessages(agreementId, scrollToBottom) {
+      if (scrollToBottom === undefined) scrollToBottom = true;
+      fetch('/api/chat/messages/' + agreementId + '?user_id=' + currentUserId)
+        .then(function(r) { return r.json(); })
+        .then(function(messages) {
+          var container = document.getElementById('chat-messages-container');
+          if (!messages || messages.length === 0) {
+            container.innerHTML = '<div class="text-center text-xs text-slate-400 py-10"><i class="fa-regular fa-comment-dots text-3xl mb-2 text-slate-300 block"></i>No messages yet. Send a message to coordinate pickup or return!</div>';
+            return;
+          }
+
+          var html = '';
+          messages.forEach(function(m) {
+            var isMe = (m.sender_id === currentUserId);
+            var alignClass = isMe ? 'justify-end' : 'justify-start';
+            var bubbleClass = isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-sm';
+            var timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            html += '<div class="flex ' + alignClass + ' mb-2">';
+            html += '  <div class="max-w-[75%] px-4 py-2.5 rounded-2xl ' + bubbleClass + '">';
+            if (!isMe) {
+              html += '    <div class="text-[10px] font-bold text-slate-400 mb-0.5">' + m.sender_name + '</div>';
+            }
+            html += '    <div class="text-sm font-medium break-words">' + m.message_text + '</div>';
+            if (m.attachment_url) {
+              html += '    <div class="mt-1.5"><a href="' + m.attachment_url + '" target="_blank" class="text-xs underline text-emerald-200 hover:text-white">View Attachment</a></div>';
+            }
+            html += '    <div class="text-[9px] mt-1 text-right opacity-70">' + timeStr + (isMe ? (m.is_read ? ' • Read' : ' • Sent') : '') + '</div>';
+            html += '  </div>';
+            html += '</div>';
+          });
+
+          container.innerHTML = html;
+          if (scrollToBottom) {
+            container.scrollTop = container.scrollHeight;
+          }
+        })
+        .catch(function(err) {
+          console.error('Error loading chat:', err);
+        });
+    }
+
+    function sendCurrentChatMessage(e) {
+      e.preventDefault();
+      var input = document.getElementById('chat-input-text');
+      var text = input.value.trim();
+      var agrId = parseInt(document.getElementById('chat-current-agreement-id').value);
+      if (!text || !agrId) return;
+
+      var btn = document.getElementById('chat-send-btn');
+      btn.disabled = true;
+
+      fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agreement_id: agrId,
+          sender_id: currentUserId,
+          message_text: text
+        })
+      })
+      .then(function(r) {
+        if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || 'Failed'); });
+        return r.json();
+      })
+      .then(function() {
+        input.value = '';
+        loadChatMessages(agrId, true);
+      })
+      .catch(function(err) {
+        alert('Could not send message: ' + err.message);
+      })
+      .finally(function() {
+        btn.disabled = false;
+      });
+    }
+
     function openDisputeModal(agreementId) {
       document.getElementById('dispute-agreement-id').value = agreementId;
       document.getElementById('dispute-claimant-id').value = currentUserId;

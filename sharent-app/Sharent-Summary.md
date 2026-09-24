@@ -359,6 +359,19 @@ rental_reviews (Airbnb-Style Multi-Criteria)
 - **Interactive UI & Dispute Modal**:
   - Styled modal on the dashboard with category selectors, claim amount validation, narrative descriptions, and photo evidence URL inputs.
 
+### Module 19: In-App Real-Time Messaging & Chat Between Owners and Renters
+- **Scoped Rental Agreement Chat Architecture**:
+  - Encapsulated direct coordination thread for each rental transaction between Owner and Renter.
+  - Strict security access controls: only verified parties to the specific rental agreement are authorized to send or read messages (`403 Forbidden` on unauthorized access).
+- **Core Chat Capabilities**:
+  - Real-time message exchange (`POST /api/chat/messages`) supporting formatted text and optional image/file attachment URLs.
+  - Automated delivery and read receipts (`is_read: true/false`).
+  - Thread summary and unread badge counters (`GET /api/chat/threads/{user_id}`).
+  - Conversation feed retrieval with automated unread-to-read state transitions (`GET /api/chat/messages/{agreement_id}?user_id={user_id}`).
+- **Interactive Chat Modal & Live Polling UI**:
+  - Modal with real-time 3-second live polling feed in `dashboard.html`.
+  - Distinguishes outgoing messages (green right-aligned bubble with timestamp and read receipt status) from incoming messages (white left-aligned bubble with sender name).
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:
@@ -414,6 +427,14 @@ cd /config/Desktop/BuildWithGemini/sharent-app
     - Tests respondent rebuttal submission and status transition to `under_review`.
     - Tests administrative split resolution: $50 damage settlement awarded to Owner, $50 deposit balance refunded to Renter.
     - Validates exact accounting in both wallets and wallet transaction audit ledger entries.
+
+18. `test_chat_messaging.py`:
+    - Tests registration and agreement creation between Owner and Renter.
+    - Tests sending coordination messages and verifying sender/receiver metadata and initial unread status.
+    - Validates thread summaries with live unread badge counting.
+    - Tests reading conversation messages and automated unread-to-read transition.
+    - Verifies reply dispatch with image attachments.
+    - Rigorously validates 403 authorization checks preventing unauthorized 3rd-party snooping or messaging.
 
 ## 6. How to Run Locally
 

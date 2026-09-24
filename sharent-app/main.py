@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker, UserReferral, DisputeClaim
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker, UserReferral, DisputeClaim, ChatMessage
 from auth import (
     hash_password,
     verify_password,
@@ -59,6 +59,9 @@ from schemas import (
     DisputeResponseRequest,
     AdminDisputeResolveRequest,
     DisputeClaimResponse,
+    ChatMessageSendRequest,
+    ChatMessageResponse,
+    ChatThreadSummary,
 )
 
 
@@ -1385,6 +1388,126 @@ def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # Module 18: Dispute & Damage Claims Management
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Module 19: In-App Real-Time Messaging & Chat Between Owners and Renters
+# ---------------------------------------------------------------------------
+
+@app.post("/api/chat/messages", response_model=ChatMessageResponse)
+def send_chat_message(payload: ChatMessageSendRequest, db: Session = Depends(get_db)):
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == payload.agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+
+    if payload.sender_id not in [agreement.renter_id, agreement.owner_id]:
+        raise HTTPException(status_code=403, detail="Unauthorized: Only agreement parties can participate in chat.")
+
+    receiver_id = agreement.owner_id if payload.sender_id == agreement.renter_id else agreement.renter_id
+    sender = db.query(User).filter(User.id == payload.sender_id).first()
+    receiver = db.query(User).filter(User.id == receiver_id).first()
+
+    msg = ChatMessage(
+        agreement_id=payload.agreement_id,
+        sender_id=payload.sender_id,
+        receiver_id=receiver_id,
+        message_text=payload.message_text.strip(),
+        attachment_url=payload.attachment_url,
+        is_read=False,
+        created_at=datetime.utcnow()
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    return ChatMessageResponse(
+        id=msg.id,
+        agreement_id=msg.agreement_id,
+        sender_id=msg.sender_id,
+        sender_name=f"{sender.first_name} {sender.last_name}",
+        receiver_id=msg.receiver_id,
+        receiver_name=f"{receiver.first_name} {receiver.last_name}",
+        message_text=msg.message_text,
+        attachment_url=msg.attachment_url,
+        is_read=msg.is_read,
+        created_at=msg.created_at
+    )
+
+@app.get("/api/chat/messages/{agreement_id}", response_model=List[ChatMessageResponse])
+def get_chat_thread_messages(agreement_id: int, user_id: int, mark_as_read: bool = True, db: Session = Depends(get_db)):
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+
+    if user_id not in [agreement.renter_id, agreement.owner_id]:
+        raise HTTPException(status_code=403, detail="Unauthorized: Only agreement parties can view messages.")
+
+    messages = db.query(ChatMessage).filter(ChatMessage.agreement_id == agreement_id).order_by(ChatMessage.created_at.asc()).all()
+
+    # Mark incoming messages as read
+    if mark_as_read:
+        for m in messages:
+            if m.receiver_id == user_id and not m.is_read:
+                m.is_read = True
+        db.commit()
+
+    results = []
+    for m in messages:
+        results.append(ChatMessageResponse(
+            id=m.id,
+            agreement_id=m.agreement_id,
+            sender_id=m.sender_id,
+            sender_name=f"{m.sender.first_name} {m.sender.last_name}" if m.sender else "Sender",
+            receiver_id=m.receiver_id,
+            receiver_name=f"{m.receiver.first_name} {m.receiver.last_name}" if m.receiver else "Receiver",
+            message_text=m.message_text,
+            attachment_url=m.attachment_url,
+            is_read=m.is_read,
+            created_at=m.created_at
+        ))
+    return results
+
+@app.get("/api/chat/threads/{user_id}", response_model=List[ChatThreadSummary])
+def get_user_chat_threads(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    agreements = db.query(RentalAgreement).filter(
+        (RentalAgreement.renter_id == user_id) | (RentalAgreement.owner_id == user_id)
+    ).order_by(RentalAgreement.id.desc()).all()
+
+    threads = []
+    for agr in agreements:
+        other_party_id = agr.owner_id if user_id == agr.renter_id else agr.renter_id
+        other_party = db.query(User).filter(User.id == other_party_id).first()
+        other_name = f"{other_party.first_name} {other_party.last_name}" if other_party else "User"
+
+        # Fetch last message
+        last_msg = db.query(ChatMessage).filter(
+            ChatMessage.agreement_id == agr.id
+        ).order_by(ChatMessage.created_at.desc()).first()
+
+        # Count unread messages for this user
+        unread_count = db.query(ChatMessage).filter(
+            ChatMessage.agreement_id == agr.id,
+            ChatMessage.receiver_id == user_id,
+            ChatMessage.is_read == False
+        ).count()
+
+        threads.append(ChatThreadSummary(
+            agreement_id=agr.id,
+            agreement_code=f"AGR-{agr.id:05d}",
+            item_title=agr.item.title if agr.item else "Rental Item",
+            other_party_id=other_party_id,
+            other_party_name=other_name,
+            last_message=last_msg.message_text if last_msg else None,
+            last_message_time=last_msg.created_at if last_msg else None,
+            unread_count=unread_count
+        ))
+
+    return threads
+
 
 @app.post("/api/disputes", response_model=DisputeClaimResponse)
 def file_dispute_claim(payload: DisputeClaimCreateRequest, db: Session = Depends(get_db)):
