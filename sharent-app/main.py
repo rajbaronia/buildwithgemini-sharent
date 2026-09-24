@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction
 from auth import (
     hash_password,
     verify_password,
@@ -44,6 +44,10 @@ from schemas import (
     CreateReviewRequest,
     ReviewResponse,
     ItemReviewSummaryResponse,
+    ItemCriteriaBreakdown,
+    UserWalletResponse,
+    WalletTransactionResponse,
+    WithdrawalRequest,
     ItemCriteriaBreakdown,
 )
 
@@ -143,6 +147,34 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
             "phone_code": phone_otp["code"],
         },
     }
+
+
+def get_or_create_user_wallet(user_id: int, db: Session) -> UserWallet:
+    wallet = db.query(UserWallet).filter(UserWallet.user_id == user_id).first()
+    if not wallet:
+        # Credit initial $20.00 sign-up bonus
+        wallet = UserWallet(
+            user_id=user_id,
+            promotional_credit_balance=20.0,
+            withdrawable_cash_balance=0.0
+        )
+        db.add(wallet)
+        db.commit()
+        db.refresh(wallet)
+
+        tx = WalletTransaction(
+            wallet_id=wallet.id,
+            user_id=user_id,
+            transaction_type="signup_bonus",
+            balance_type="promotional_credit",
+            amount=20.0,
+            description="Welcome Sign-Up Bonus Credit (Non-Withdrawable)",
+            created_at=datetime.utcnow()
+        )
+        db.add(tx)
+        db.commit()
+    return wallet
+
 
 @app.post("/api/verify-otp")
 def verify_otp(payload: OTPVerifyRequest, db: Session = Depends(get_db)):
@@ -655,29 +687,129 @@ def process_checkout_payment(payload: CheckoutPaymentRequest, db: Session = Depe
     if agreement.status == "confirmed":
         raise HTTPException(status_code=400, detail="Payment for this rental agreement has already been processed.")
 
-    # 2. Validate Payment Details (Card Simulation)
-    clean_card = payload.card_number.replace(" ", "").replace("-", "")
-    if len(clean_card) < 13 or not clean_card.isdigit():
-        raise HTTPException(status_code=400, detail="Invalid card number. Please provide a valid 13-19 digit card number.")
-    if len(payload.cvv) not in (3, 4) or not payload.cvv.isdigit():
-        raise HTTPException(status_code=400, detail="Invalid CVV security code.")
-    if not payload.billing_zip.strip():
-        raise HTTPException(status_code=400, detail="Billing ZIP code is required.")
+    renter_wallet = get_or_create_user_wallet(agreement.renter_id, db)
 
-    # Simulated decline rule: Card ending in 0000 simulates decline
-    if clean_card.endswith("0000"):
-        raise HTTPException(status_code=402, detail="Card was declined by issuing bank (insufficient funds / fraud trigger).")
+    # 2. Credit application rule:
+    # Credits CAN be used for base_rent and service_fee.
+    # Credits CANNOT be used for security_deposit and insurance_fee.
+    # Credit is applied to base_rent first, then to service_fee.
+    credit_to_apply = 0.0
+    rent_credit_used = 0.0
+    service_fee_credit_used = 0.0
 
-    card_last4 = clean_card[-4:]
-    amount_charged = round(agreement.base_rent + agreement.service_fee + agreement.insurance_fee, 2)
+    if payload.apply_credit and renter_wallet.total_balance > 0:
+        # First cover base_rent
+        rent_credit_used = min(renter_wallet.total_balance, agreement.base_rent)
+        remaining_balance = round(renter_wallet.total_balance - rent_credit_used, 2)
+        # Then cover service_fee
+        service_fee_credit_used = min(remaining_balance, agreement.service_fee)
+        credit_to_apply = round(rent_credit_used + service_fee_credit_used, 2)
+
+    # External charge required
+    external_rent = round(agreement.base_rent - rent_credit_used, 2)
+    external_service_fee = round(agreement.service_fee - service_fee_credit_used, 2)
+    insurance_fee = round(agreement.insurance_fee, 2)
     escrow_deposit_held = round(agreement.security_deposit, 2)
+    
+    amount_charged = round(external_rent + external_service_fee + insurance_fee, 2)
+    external_total = round(amount_charged + escrow_deposit_held, 2)
     total_paid = agreement.total_amount
 
-    # 3. Generate secure Transaction Reference and 4-digit Handover Verification PIN
+    # 3. Simulate Payment Gateway Authorization if external charge > 0
+    card_last4 = "CREDIT"
+    if external_total > 0:
+        if payload.payment_method == "credit_card":
+            if not payload.card_number:
+                raise HTTPException(status_code=400, detail="Card number is required to cover insurance/deposit/remaining balance.")
+            clean_card = payload.card_number.replace(" ", "").replace("-", "")
+            if len(clean_card) < 13 or not clean_card.isdigit():
+                raise HTTPException(status_code=400, detail="Invalid card number. Please provide a valid 13-19 digit card number.")
+            if payload.cvv and (len(payload.cvv) not in (3, 4) or not payload.cvv.isdigit()):
+                raise HTTPException(status_code=400, detail="Invalid CVV security code.")
+            if clean_card.endswith("0000"):
+                raise HTTPException(status_code=402, detail="Card was declined by issuing bank (insufficient funds / fraud trigger).")
+            card_last4 = clean_card[-4:]
+        elif payload.payment_method in ["paypal", "venmo"]:
+            card_last4 = payload.payment_method.upper()
+        else:
+            card_last4 = "CARD"
+
+    # 4. Deduct credit from Renter wallet (first promotional bonus, then withdrawable cash)
+    promotional_credit_used = 0.0
+    cash_credit_used = 0.0
+    if credit_to_apply > 0:
+        if renter_wallet.promotional_credit_balance >= credit_to_apply:
+            promotional_credit_used = credit_to_apply
+            renter_wallet.promotional_credit_balance = round(renter_wallet.promotional_credit_balance - credit_to_apply, 2)
+        else:
+            promotional_credit_used = renter_wallet.promotional_credit_balance
+            remainder = round(credit_to_apply - promotional_credit_used, 2)
+            renter_wallet.promotional_credit_balance = 0.0
+            cash_credit_used = remainder
+            renter_wallet.withdrawable_cash_balance = round(renter_wallet.withdrawable_cash_balance - remainder, 2)
+
+        tx_renter = WalletTransaction(
+            wallet_id=renter_wallet.id,
+            user_id=agreement.renter_id,
+            agreement_id=agreement.id,
+            transaction_type="rental_payment",
+            balance_type="promotional_credit" if promotional_credit_used > 0 else "withdrawable_cash",
+            amount=-credit_to_apply,
+            description=f"Applied ${credit_to_apply:.2f} credit to rental (Agr #{agreement.id})",
+            created_at=datetime.utcnow()
+        )
+        db.add(tx_renter)
+
+    # 5. Owner Earnings Calculation (10% platform commission on base rent)
+    # Net owner earnings = base_rent * 0.90
+    net_owner_earning = round(agreement.base_rent * 0.90, 2)
+    owner_wallet = get_or_create_user_wallet(agreement.owner_id, db)
+
+    # Origin Tracking:
+    # If the base rent was paid via promotional credit, owner receives promotional (non-withdrawable) credit.
+    # If paid via external cash, owner receives withdrawable cash.
+    # If promotional credit was used towards this rental, net owner earnings derived from bonus are non-withdrawable
+    if promotional_credit_used > 0:
+        # As specified: earnings funded by promotional bonus credits are non-withdrawable promotional credits
+        owner_bonus_earning = net_owner_earning
+        owner_cash_earning = 0.0
+    else:
+        owner_bonus_earning = 0.0
+        owner_cash_earning = net_owner_earning
+
+    if owner_bonus_earning > 0:
+        owner_wallet.promotional_credit_balance = round(owner_wallet.promotional_credit_balance + owner_bonus_earning, 2)
+        tx_owner_bonus = WalletTransaction(
+            wallet_id=owner_wallet.id,
+            user_id=agreement.owner_id,
+            agreement_id=agreement.id,
+            transaction_type="owner_earning",
+            balance_type="promotional_credit",
+            amount=owner_bonus_earning,
+            description=f"Rental earnings (Agr #{agreement.id}) - Promotional Credit (Non-Withdrawable)",
+            created_at=datetime.utcnow()
+        )
+        db.add(tx_owner_bonus)
+
+    if owner_cash_earning > 0:
+        owner_wallet.withdrawable_cash_balance = round(owner_wallet.withdrawable_cash_balance + owner_cash_earning, 2)
+        tx_owner_cash = WalletTransaction(
+            wallet_id=owner_wallet.id,
+            user_id=agreement.owner_id,
+            agreement_id=agreement.id,
+            transaction_type="owner_earning",
+            balance_type="withdrawable_cash",
+            amount=owner_cash_earning,
+            description=f"Rental earnings (Agr #{agreement.id}) - Withdrawable Cash",
+            created_at=datetime.utcnow()
+        )
+        db.add(tx_owner_cash)
+
+    # 6. Generate secure Transaction Reference and 4-digit Handover Verification PIN
     txn_code = f"TXN-{random.randint(10000000, 99999999)}"
     handover_pin = f"{random.randint(1000, 9999)}"
 
-    # 4. Record Payment Transaction
+    # 7. Record Payment Transaction
     transaction = PaymentTransaction(
         agreement_id=agreement.id,
         renter_id=agreement.renter_id,
@@ -728,6 +860,7 @@ def process_checkout_payment(payload: CheckoutPaymentRequest, db: Session = Depe
     return CheckoutPaymentResponse(
         id=transaction.id,
         transaction_code=transaction.transaction_code,
+        credit_applied=credit_to_apply,
         agreement_code=f"SHR-AGR-{agreement.id:05d}",
         item_title=item.title if item else "Rental Item",
         owner_name=owner_name,
@@ -1085,3 +1218,70 @@ def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
         criteria_breakdown=breakdown,
         reviews=rev_list
     )
+
+
+@app.get("/api/wallet/{user_id}", response_model=UserWalletResponse)
+def get_user_wallet(user_id: int, db: Session = Depends(get_db)):
+    wallet = get_or_create_user_wallet(user_id, db)
+    txs = db.query(WalletTransaction).filter(WalletTransaction.user_id == user_id).order_by(WalletTransaction.created_at.desc()).all()
+    
+    tx_list = [
+        WalletTransactionResponse(
+            id=t.id,
+            transaction_type=t.transaction_type,
+            balance_type=t.balance_type,
+            amount=t.amount,
+            description=t.description,
+            created_at=t.created_at
+        ) for t in txs
+    ]
+
+    return UserWalletResponse(
+        user_id=user_id,
+        total_balance=wallet.total_balance,
+        promotional_credit_balance=round(wallet.promotional_credit_balance, 2),
+        withdrawable_cash_balance=round(wallet.withdrawable_cash_balance, 2),
+        transactions=tx_list
+    )
+
+
+@app.post("/api/wallet/withdraw")
+def withdraw_funds(payload: WithdrawalRequest, db: Session = Depends(get_db)):
+    wallet = get_or_create_user_wallet(payload.user_id, db)
+    
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Withdrawal amount must be greater than $0.00.")
+
+    # Check withdrawable cash balance vs promotional bonus
+    if payload.amount > wallet.withdrawable_cash_balance:
+        if wallet.promotional_credit_balance > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Withdrawal failed. Your available withdrawable cash is ${wallet.withdrawable_cash_balance:.2f}. "
+                       f"Your remaining ${wallet.promotional_credit_balance:.2f} balance consists of promotional sign-up bonus credits, "
+                       f"which can only be used for renting items on Sharent and cannot be withdrawn to {payload.destination_type.title()}."
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Insufficient withdrawable balance.")
+
+    # Process cash withdrawal
+    wallet.withdrawable_cash_balance = round(wallet.withdrawable_cash_balance - payload.amount, 2)
+    
+    tx = WalletTransaction(
+        wallet_id=wallet.id,
+        user_id=payload.user_id,
+        transaction_type="withdrawal",
+        balance_type="withdrawable_cash",
+        amount=-payload.amount,
+        description=f"Withdrawal to {payload.destination_type.title()} ({payload.destination_account})",
+        created_at=datetime.utcnow()
+    )
+    db.add(tx)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Successfully initiated transfer of ${payload.amount:.2f} to {payload.destination_type.title()} ({payload.destination_account}).",
+        "remaining_withdrawable_cash": wallet.withdrawable_cash_balance,
+        "total_credit_balance": wallet.total_balance
+    }

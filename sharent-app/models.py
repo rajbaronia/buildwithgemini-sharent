@@ -219,3 +219,37 @@ class RentalReview(Base):
     reviewer = relationship('User', foreign_keys=[reviewer_id])
     reviewee = relationship('User', foreign_keys=[reviewee_id])
     item = relationship('Item')
+
+
+class UserWallet(Base):
+    __tablename__ = 'user_wallets'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=False)
+    promotional_credit_balance = Column(Float, default=20.0)  # Non-withdrawable promotional credit
+    withdrawable_cash_balance = Column(Float, default=0.0)    # Withdrawable real cash earnings
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship('User')
+
+    @property
+    def total_balance(self) -> float:
+        return round((self.promotional_credit_balance or 0.0) + (self.withdrawable_cash_balance or 0.0), 2)
+
+
+class WalletTransaction(Base):
+    __tablename__ = 'wallet_transactions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    wallet_id = Column(Integer, ForeignKey('user_wallets.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    agreement_id = Column(Integer, ForeignKey('rental_agreements.id'), nullable=True)
+    transaction_type = Column(String, nullable=False)  # signup_bonus, rental_payment, owner_earning, withdrawal
+    balance_type = Column(String, nullable=False)      # promotional_credit, withdrawable_cash
+    amount = Column(Float, nullable=False)
+    description = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    wallet = relationship('UserWallet')
+    user = relationship('User')
+    agreement = relationship('RentalAgreement')

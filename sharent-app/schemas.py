@@ -191,16 +191,18 @@ class RentalAgreementResponse(BaseModel):
 class CheckoutPaymentRequest(BaseModel):
     agreement_id: int
     renter_id: int
-    payment_method: str = 'credit_card'
-    card_number: str
-    exp_month: str
-    exp_year: str
-    cvv: str
-    billing_zip: str
+    payment_method: str = 'credit_card'  # credit_card, paypal, venmo, sharent_credit
+    card_number: Optional[str] = None
+    exp_month: Optional[str] = None
+    exp_year: Optional[str] = None
+    cvv: Optional[str] = None
+    billing_zip: Optional[str] = None
+    apply_credit: Optional[bool] = True
 
 class CheckoutPaymentResponse(BaseModel):
     id: int
     transaction_code: str
+    credit_applied: Optional[float] = 0.0
     agreement_code: str
     item_title: str
     owner_name: str
@@ -318,3 +320,25 @@ class ItemReviewSummaryResponse(BaseModel):
     total_reviews: int
     criteria_breakdown: ItemCriteriaBreakdown
     reviews: List[ReviewResponse]
+
+
+class WalletTransactionResponse(BaseModel):
+    id: int
+    transaction_type: str
+    balance_type: str
+    amount: float
+    description: str
+    created_at: datetime
+
+class UserWalletResponse(BaseModel):
+    user_id: int
+    total_balance: float
+    promotional_credit_balance: float  # Non-withdrawable
+    withdrawable_cash_balance: float   # Withdrawable
+    transactions: List[WalletTransactionResponse] = []
+
+class WithdrawalRequest(BaseModel):
+    user_id: int
+    amount: float
+    destination_type: str  # paypal, bank_transfer, venmo
+    destination_account: str

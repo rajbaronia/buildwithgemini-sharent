@@ -247,6 +247,31 @@ rental_reviews (Airbnb-Style Multi-Criteria)
 
 ---
 
+### Module 14: Promotional Sign-Up Bonus, Split Fee Payments & Non-Withdrawable Credit Accounting
+- **Automatic $20.00 Welcome Promotional Credit**:
+  - Automatically credited to each newly registered and dual-verified user's wallet.
+  - Automatically initialized for existing active members.
+- **Credit Applicability Restrictions**:
+  - Promotional credits **can** be applied toward:
+    1. **Usage Fee (Base Rent)**
+    2. **Platform Service Fee**
+  - Promotional credits **cannot** be applied toward:
+    1. **Security Deposit (Escrow)**
+    2. **Insurance Fee**
+- **Strict Non-Withdrawable Policy**:
+  - Promotional credits and net earnings originating from promotional credits cannot be withdrawn to external bank accounts, PayPal, or Venmo.
+  - Any payout withdrawal attempt against promotional credits is blocked with an informative restriction message.
+- **Dual-Balance Ledger Architecture (`UserWallet` & `WalletTransaction`)**:
+  - `promotional_credit_balance`: Non-withdrawable balance derived from sign-up promotions and bonus-funded rentals.
+  - `withdrawable_cash_balance`: Real withdrawable earnings generated from cash/card transactions.
+  - Full audit trail logging of transactions: `signup_bonus`, `rental_payment`, `owner_earning`, and `withdrawal`.
+- **Origin/Taint Tracking for Owner Net Earnings**:
+  - When a renter pays for equipment using promotional credit, the net owner earnings (after the 10% platform commission) are credited as promotional credit (non-withdrawable).
+- **Interactive UI**:
+  - Header credit chip displaying live balance (`Credits: $XX.XX`).
+  - Dedicated Wallet & Payout modal with credit vs. cash breakdown, audit history, and cash withdrawal form.
+  - Checkout summary automatically reflects credits applied against eligible rental & service fees.
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:
@@ -269,6 +294,15 @@ cd /config/Desktop/BuildWithGemini/sharent-app
 11. `test_registration.py` (2 tests) — User registration & dual-channel OTP validation.
 
 ---
+
+## 13. `test_wallet_and_bonus.py`:
+    - Validates the exact multi-user scenario (User A, B, and C):
+      - User A ($20 bonus), User B ($20 bonus), User C ($20 bonus).
+      - User C rents User A's electric drill ($10/day) using promotional credit.
+      - User A receives net $9 ($10 - 10%), increasing User A's balance to $29.
+      - User A rents User B's kayak ($15/day for 2 days = $30). User A applies all $29 credit + $1 PayPal.
+      - User B receives net $27 ($30 - 10%), increasing User B's balance to $47.
+      - User B attempts to withdraw $47 to PayPal, which is strictly rejected due to non-withdrawable promotional credit rules.
 
 ## 6. How to Run Locally
 
