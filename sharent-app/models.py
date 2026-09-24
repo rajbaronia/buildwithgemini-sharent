@@ -24,6 +24,8 @@ class User(Base):
     
     is_email_verified = Column(Boolean, default=False)
     is_phone_verified = Column(Boolean, default=False)
+    referral_code = Column(String(32), unique=True, index=True, nullable=True)
+    referred_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     @property
@@ -230,11 +232,32 @@ class PromotionalProgramConfig(Base):
     program_key = Column(String, unique=True, nullable=False, default="signup_inventory_listing_bonus")
     program_name = Column(String, nullable=False, default="Sign-Up Inventory Listing Bonus")
     bonus_amount = Column(Float, nullable=False, default=20.0)
+    referrer_bonus_amount = Column(Float, nullable=False, default=15.0)  # Bonus to existing user who referred
+    invitee_bonus_amount = Column(Float, nullable=False, default=20.0)   # Sign-up bonus to new user invited
     required_active_items = Column(Integer, nullable=False, default=10)
     required_active_days = Column(Integer, nullable=False, default=90)  # 3 months
     is_active = Column(Boolean, default=True)
     description = Column(String, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+
+class UserReferral(Base):
+    __tablename__ = 'user_referrals'
+
+    id = Column(Integer, primary_key=True, index=True)
+    referrer_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    invitee_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=False)
+    referral_code = Column(String(32), nullable=False)
+    status = Column(String(20), default="pending", nullable=False)  # pending, completed, cancelled
+    referrer_bonus_amount = Column(Float, default=15.0)
+    invitee_bonus_amount = Column(Float, default=20.0)
+    channel_source = Column(String(30), default="link")  # email, whatsapp, facebook, instagram, twitter, link
+    awarded_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    referrer = relationship('User', foreign_keys=[referrer_id], backref='referrals_sent')
+    invitee = relationship('User', foreign_keys=[invitee_id], backref='referral_received')
 
 
 class UserBonusTracker(Base):

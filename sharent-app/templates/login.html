@@ -4,7 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SHARENT - Secure User Login</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com">
+    // Auto-populate referral code if present in URL (?ref=REF-XXXX)
+    window.addEventListener('DOMContentLoaded', function() {
+      var urlParams = new URLSearchParams(window.location.search);
+      var refCode = urlParams.get('ref');
+      if (refCode) {
+        var refInput = document.getElementById('reg-referral-code');
+        if (refInput) {
+          refInput.value = refCode.toUpperCase();
+        }
+        // If there is a tab switcher for Register, switch to it
+        var regTabBtn = document.getElementById('tab-register');
+        if (regTabBtn) regTabBtn.click();
+      }
+    });
+
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     tailwind.config = {
@@ -23,6 +39,22 @@
         }
       }
     }
+  
+    // Auto-populate referral code if present in URL (?ref=REF-XXXX)
+    window.addEventListener('DOMContentLoaded', function() {
+      var urlParams = new URLSearchParams(window.location.search);
+      var refCode = urlParams.get('ref');
+      if (refCode) {
+        var refInput = document.getElementById('reg-referral-code');
+        if (refInput) {
+          refInput.value = refCode.toUpperCase();
+        }
+        // If there is a tab switcher for Register, switch to it
+        var regTabBtn = document.getElementById('tab-register');
+        if (regTabBtn) regTabBtn.click();
+      }
+    });
+
   </script>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 font-sans antialiased">
@@ -77,6 +109,16 @@
               <input type="password" id="password" required placeholder="Enter your password"
                 class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm">
             </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Referral Code (Optional)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-500"><i class="fa-solid fa-gift"></i></span>
+              <input type="text" id="reg-referral-code" placeholder="e.g. REF-ALIC-A1B2C3"
+                class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition text-sm font-mono uppercase">
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Have a friend's referral code? Enter it here to earn your sign-up bonus!</p>
           </div>
 
           <div>
@@ -181,6 +223,7 @@
       var payload = {
         username: document.getElementById('username').value.trim(),
         password: document.getElementById('password').value,
+        referral_code: (document.getElementById('reg-referral-code') ? document.getElementById('reg-referral-code').value.trim() : null) || null,
         preferred_channel: channel
       };
 
@@ -284,6 +327,22 @@
       document.getElementById('login-step-2').classList.add('hidden');
       document.getElementById('login-step-1').classList.remove('hidden');
     }
+  
+    // Auto-populate referral code if present in URL (?ref=REF-XXXX)
+    window.addEventListener('DOMContentLoaded', function() {
+      var urlParams = new URLSearchParams(window.location.search);
+      var refCode = urlParams.get('ref');
+      if (refCode) {
+        var refInput = document.getElementById('reg-referral-code');
+        if (refInput) {
+          refInput.value = refCode.toUpperCase();
+        }
+        // If there is a tab switcher for Register, switch to it
+        var regTabBtn = document.getElementById('tab-register');
+        if (regTabBtn) regTabBtn.click();
+      }
+    });
+
   </script>
 </body>
 </html>

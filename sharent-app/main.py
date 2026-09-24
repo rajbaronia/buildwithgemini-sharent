@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker, UserReferral
 from auth import (
     hash_password,
     verify_password,
@@ -53,7 +53,25 @@ from schemas import (
     PromotionalProgramConfigResponse,
     PromotionalProgramConfigRequest,
     UserBonusProgressResponse,
+    MyReferralCodeResponse,
+    ReferralItemResponse,
 )
+
+
+
+import uuid
+import urllib.parse
+
+def generate_unique_referral_code(user_first_name: str, db: Session) -> str:
+    clean_name = "".join(c for c in (user_first_name or "USER") if c.isalnum()).upper()[:4]
+    if len(clean_name) < 2:
+        clean_name = "SHARE"
+    for _ in range(10):
+        code = f"REF-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+        existing = db.query(User).filter(User.referral_code == code).first()
+        if not existing:
+            return code
+    return f"REF-{uuid.uuid4().hex[:8].upper()}"
 
 app = FastAPI(title="SHARENT Marketplace")
 
@@ -122,6 +140,11 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.phone == payload.phone.strip()).first():
         raise HTTPException(status_code=400, detail="Phone number is already registered.")
 
+    ref_code = generate_unique_referral_code(payload.first_name, db)
+    referrer = None
+    if payload.referral_code:
+        referrer = db.query(User).filter(User.referral_code == payload.referral_code.strip().upper()).first()
+
     new_user = User(
         first_name=payload.first_name.strip(),
         last_name=payload.last_name.strip(),
@@ -132,10 +155,26 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
         hashed_password=hash_password(payload.password),
         is_email_verified=False,
         is_phone_verified=False,
+        referral_code=ref_code,
+        referred_by_id=referrer.id if referrer else None
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    if referrer:
+        config = get_or_create_promotional_config(db)
+        referral_record = UserReferral(
+            referrer_id=referrer.id,
+            invitee_id=new_user.id,
+            referral_code=payload.referral_code.strip().upper(),
+            status="pending",
+            referrer_bonus_amount=config.referrer_bonus_amount if config.referrer_bonus_amount is not None else 15.0,
+            invitee_bonus_amount=config.invitee_bonus_amount if config.invitee_bonus_amount is not None else 20.0,
+            channel_source="link"
+        )
+        db.add(referral_record)
+        db.commit()
 
     email_otp = create_and_send_otp(db, new_user, "email")
     phone_otp = create_and_send_otp(db, new_user, "phone")
@@ -185,6 +224,8 @@ def get_or_create_promotional_config(db: Session) -> PromotionalProgramConfig:
             program_key="signup_inventory_listing_bonus",
             program_name="Sign-Up Inventory Listing Bonus",
             bonus_amount=20.0,
+            referrer_bonus_amount=15.0,
+            invitee_bonus_amount=20.0,
             required_active_items=10,
             required_active_days=90,
             is_active=True,
@@ -250,6 +291,35 @@ def evaluate_user_promotional_bonus(user_id: int, db: Session):
         tracker.bonus_amount_awarded = config.bonus_amount
         tracker.awarded_at = datetime.utcnow()
         tracker.last_evaluated_at = datetime.utcnow()
+
+        # Check if this user was referred by someone -> Award Referrer Bonus!
+        invitee_user = db.query(User).filter(User.id == user_id).first()
+        if invitee_user and invitee_user.referred_by_id:
+            referral = db.query(UserReferral).filter(
+                UserReferral.invitee_id == user_id,
+                UserReferral.status == "pending"
+            ).first()
+            if referral:
+                ref_bonus = config.referrer_bonus_amount or 15.0
+                referrer_wallet = get_or_create_user_wallet(invitee_user.referred_by_id, db)
+                referrer_wallet.promotional_credit_balance = round(referrer_wallet.promotional_credit_balance + ref_bonus, 2)
+
+                ref_tx = WalletTransaction(
+                    wallet_id=referrer_wallet.id,
+                    user_id=invitee_user.referred_by_id,
+                    transaction_type="referral_bonus",
+                    balance_type="promotional_credit",
+                    amount=ref_bonus,
+                    description=f"Referral Bonus for inviting {invitee_user.first_name} {invitee_user.last_name} (Completed active inventory listings)",
+                    created_at=datetime.utcnow()
+                )
+                db.add(ref_tx)
+
+                referral.status = "completed"
+                referral.referrer_bonus_amount = ref_bonus
+                referral.invitee_bonus_amount = config.bonus_amount
+                referral.awarded_at = datetime.utcnow()
+
         db.commit()
         db.refresh(tracker)
 
@@ -1306,6 +1376,78 @@ def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
 
 
 
+
+@app.get("/api/referrals/my-code/{user_id}", response_model=MyReferralCodeResponse)
+def get_user_referral_details(user_id: int, request: Request, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if not user.referral_code:
+        user.referral_code = generate_unique_referral_code(user.first_name, db)
+        db.commit()
+        db.refresh(user)
+
+    config = get_or_create_promotional_config(db)
+    ref_bonus = config.referrer_bonus_amount if config.referrer_bonus_amount is not None else 15.0
+    inv_bonus = config.invitee_bonus_amount if config.invitee_bonus_amount is not None else 20.0
+
+    # Build shareable link
+    base_url = str(request.base_url).rstrip('/')
+    share_link = f"{base_url}/login-page?ref={user.referral_code}"
+
+    # Pre-compose multi-channel social links
+    share_text = f"Join me on SHARENT! Use my referral code {user.referral_code} to get a ${inv_bonus:.2f} welcome bonus on peer-to-peer equipment rentals."
+    encoded_text = urllib.parse.quote(share_text)
+    encoded_link = urllib.parse.quote(share_link)
+
+    social_links = {
+        "whatsapp": f"https://api.whatsapp.com/send?text={encoded_text}%20{encoded_link}",
+        "email": f"mailto:?subject=Get%20${inv_bonus:.2f}%20bonus%20on%20SHARENT&body={encoded_text}%0A%0ASign%20up%20here:%20{encoded_link}",
+        "facebook": f"https://www.facebook.com/sharer/sharer.php?u={encoded_link}",
+        "twitter": f"https://twitter.com/intent/tweet?text={encoded_text}&url={encoded_link}",
+        "copy_text": f"{share_text} {share_link}"
+    }
+
+    # Fetch user's referrals sent
+    records = db.query(UserReferral).filter(UserReferral.referrer_id == user_id).order_by(UserReferral.created_at.desc()).all()
+    referral_items = []
+    completed_count = 0
+    total_earnings = 0.0
+
+    for r in records:
+        if r.status == "completed":
+            completed_count += 1
+            total_earnings += r.referrer_bonus_amount
+        referral_items.append(ReferralItemResponse(
+            id=r.id,
+            invitee_id=r.invitee_id,
+            invitee_name=f"{r.invitee.first_name} {r.invitee.last_name}" if r.invitee else "Invited User",
+            invitee_email_masked=mask_contact(r.invitee.email, "email") if r.invitee else "***",
+            status=r.status,
+            referrer_bonus_amount=r.referrer_bonus_amount,
+            invitee_bonus_amount=r.invitee_bonus_amount,
+            channel_source=r.channel_source,
+            created_at=r.created_at,
+            awarded_at=r.awarded_at
+        ))
+
+    return MyReferralCodeResponse(
+        user_id=user_id,
+        referral_code=user.referral_code,
+        referral_link=share_link,
+        referrer_bonus_amount=ref_bonus,
+        invitee_bonus_amount=inv_bonus,
+        required_active_items=config.required_active_items,
+        total_referrals_sent=len(records),
+        completed_referrals=completed_count,
+        pending_referrals=len(records) - completed_count,
+        total_referral_earnings=round(total_earnings, 2),
+        share_links=social_links,
+        referrals=referral_items
+    )
+
+
 @app.get("/api/admin/promotions/signup-bonus", response_model=PromotionalProgramConfigResponse)
 def get_promotional_program_config(db: Session = Depends(get_db)):
     config = get_or_create_promotional_config(db)
@@ -1313,6 +1455,8 @@ def get_promotional_program_config(db: Session = Depends(get_db)):
         program_key=config.program_key,
         program_name=config.program_name,
         bonus_amount=config.bonus_amount,
+        referrer_bonus_amount=config.referrer_bonus_amount if config.referrer_bonus_amount is not None else 15.0,
+        invitee_bonus_amount=config.invitee_bonus_amount if config.invitee_bonus_amount is not None else 20.0,
         required_active_items=config.required_active_items,
         required_active_days=config.required_active_days,
         is_active=config.is_active,
@@ -1326,6 +1470,14 @@ def update_promotional_program_config(payload: PromotionalProgramConfigRequest, 
         if payload.bonus_amount < 0:
             raise HTTPException(status_code=400, detail="Bonus amount cannot be negative.")
         config.bonus_amount = payload.bonus_amount
+    if payload.referrer_bonus_amount is not None:
+        if payload.referrer_bonus_amount < 0:
+            raise HTTPException(status_code=400, detail="Referrer bonus amount cannot be negative.")
+        config.referrer_bonus_amount = payload.referrer_bonus_amount
+    if payload.invitee_bonus_amount is not None:
+        if payload.invitee_bonus_amount < 0:
+            raise HTTPException(status_code=400, detail="Invitee bonus amount cannot be negative.")
+        config.invitee_bonus_amount = payload.invitee_bonus_amount
     if payload.required_active_items is not None:
         if payload.required_active_items < 0:
             raise HTTPException(status_code=400, detail="Required active items cannot be negative.")
@@ -1345,6 +1497,8 @@ def update_promotional_program_config(payload: PromotionalProgramConfigRequest, 
         program_key=config.program_key,
         program_name=config.program_name,
         bonus_amount=config.bonus_amount,
+        referrer_bonus_amount=config.referrer_bonus_amount if config.referrer_bonus_amount is not None else 15.0,
+        invitee_bonus_amount=config.invitee_bonus_amount if config.invitee_bonus_amount is not None else 20.0,
         required_active_items=config.required_active_items,
         required_active_days=config.required_active_days,
         is_active=config.is_active,

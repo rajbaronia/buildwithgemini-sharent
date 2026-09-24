@@ -313,6 +313,35 @@ rental_reviews (Airbnb-Style Multi-Criteria)
 - **Milestone Progress UI**:
   - Interactive milestone tracker card with gradient progress bar in the Sharent Wallet Modal and inventory dashboard showing real-time progress toward unlocking the sign-up bonus.
 
+### Module 17: Multi-Channel Social Referral Program with Dynamic Dual-Sided Incentives
+- **Viral Referral Engine & Dual-Sided Incentives**:
+  - Existing users (referrers) are incentivized to invite friends through multi-channel social sharing.
+  - When the invitee successfully registers using the referral code and lists the required active items, a **dual reward** is triggered:
+    1. **Invitee (New User)** receives their **Sign-Up Bonus** (Module 16).
+    2. **Referrer (Existing User)** receives a **Referral Bonus** credited directly into their Sharent Wallet.
+- **Unique Referral Code Generation**:
+  - Every registered user automatically receives a branded unique referral code (e.g. `REF-ALIC-A1B2C3`).
+  - Shareable link format: `http://localhost:8000/login-page?ref=REF-ALIC-A1B2C3`.
+- **Multi-Channel Social Sharing Integration**:
+  - Pre-composed instant sharing links for:
+    - 💬 **WhatsApp**: Pre-formatted text with code and clickable registration link.
+    - ✉️ **Email**: Mailto link with custom subject line and body.
+    - 📘 **Facebook**: Direct sharing dialog link.
+    - ✖️ **Twitter / X**: Pre-composed tweet with hashtags and invite URL.
+    - 📋 **1-Click Copy Code & Direct Invite Link**.
+- **Dynamic Platform Configuration (`PromotionalProgramConfig`)**:
+  - Variable incentive parameters controlled dynamically via admin APIs:
+    - `referrer_bonus_amount` (default: **$15.00**)
+    - `invitee_bonus_amount` (default: **$20.00**)
+    - `required_active_items` (default: **10 items**)
+    - `required_active_days` (default: **90 days / 3 months**)
+- **Referral Lifecycle & Automated Unlock (`UserReferral`)**:
+  - Tracks referral state: `pending` (invitee registered) -> `completed` (invitee met listing milestone).
+  - Automatically credits the referrer's wallet with a `referral_bonus` audit transaction the moment the invitee lists the 10th qualifying item.
+- **Interactive UI & Real-Time Referral Dashboard**:
+  - Added **"Invite & Earn $15"** navigation button and full modal with live counters (*Friends Invited*, *Pending Listings*, *Total Earned*), and an activity feed of invited friends.
+  - Added **Referral Code (Optional)** input in registration form with auto-fill from `?ref=...` URL parameter.
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:
@@ -355,6 +384,12 @@ cd /config/Desktop/BuildWithGemini/sharent-app
     - Tests the conditional sign-up bonus lifecycle: 0 items listed ($0 balance) -> 9 items listed ($0 balance) -> 10th item listed with < 90 days commitment ($0 balance) -> 10th item listed with 90-day active commitment (automatically unlocks $20.00 bonus credit).
     - Tests dynamic platform variable updates via `PUT /api/admin/promotions/signup-bonus` (updating requirement to 3 items and $35.00 bonus).
     - Verifies another user qualifying under the dynamically updated thresholds.
+
+16. `test_referral_bonus.py`:
+    - Tests unique referral code generation and multi-channel social links (WhatsApp, Email, Facebook, Twitter).
+    - Verifies invitee registration linking and pending referral tracking.
+    - Tests incremental listing: 1 to 9 items keeps referral pending; 10th qualifying item triggers dual bonus payout (Invitee gets $20 sign-up bonus, Referrer automatically receives $15 referral bonus).
+    - Tests dynamic administrative threshold adjustment ($25 referrer bonus, $30 invitee bonus, 2 items threshold) and subsequent qualification.
 
 ## 6. How to Run Locally
 

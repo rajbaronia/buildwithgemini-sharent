@@ -9,7 +9,8 @@ class UserRegisterRequest(BaseModel):
     phone: str = Field(..., min_length=7, max_length=20)
     address: str = Field(..., min_length=3, max_length=255)
     username: str = Field(..., min_length=3, max_length=30)
-    password: str = Field(..., min_length=6, max_length=128)
+    password: str = Field(..., min_length=8)
+    referral_code: Optional[str] = None
 
 class OTPVerifyRequest(BaseModel):
     user_id: int
@@ -370,6 +371,8 @@ class PromotionalProgramConfigResponse(BaseModel):
     program_key: str
     program_name: str
     bonus_amount: float
+    referrer_bonus_amount: float
+    invitee_bonus_amount: float
     required_active_items: int
     required_active_days: int
     is_active: bool
@@ -377,6 +380,8 @@ class PromotionalProgramConfigResponse(BaseModel):
 
 class PromotionalProgramConfigRequest(BaseModel):
     bonus_amount: Optional[float] = None
+    referrer_bonus_amount: Optional[float] = None
+    invitee_bonus_amount: Optional[float] = None
     required_active_items: Optional[int] = None
     required_active_days: Optional[int] = None
     is_active: Optional[bool] = None
@@ -393,3 +398,30 @@ class UserBonusProgressResponse(BaseModel):
     progress_percentage: float
     awarded_at: Optional[datetime] = None
     status_message: str
+
+
+class ReferralItemResponse(BaseModel):
+    id: int
+    invitee_id: int
+    invitee_name: str
+    invitee_email_masked: str
+    status: str
+    referrer_bonus_amount: float
+    invitee_bonus_amount: float
+    channel_source: str
+    created_at: datetime
+    awarded_at: Optional[datetime] = None
+
+class MyReferralCodeResponse(BaseModel):
+    user_id: int
+    referral_code: str
+    referral_link: str
+    referrer_bonus_amount: float
+    invitee_bonus_amount: float
+    required_active_items: int
+    total_referrals_sent: int
+    completed_referrals: int
+    pending_referrals: int
+    total_referral_earnings: float
+    share_links: dict
+    referrals: List[ReferralItemResponse]
