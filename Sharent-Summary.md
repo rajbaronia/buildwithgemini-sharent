@@ -387,6 +387,19 @@ rental_reviews (Airbnb-Style Multi-Criteria)
   - Dropdown drawer listing recent notifications with channel badges (Push, SMS, Email).
   - 1-click "Mark all read" and individual read state transitions (`PUT /api/notifications/{id}/read` & `PUT /api/notifications/read-all/{user_id}`).
 
+### Responsive UI/UX & Mobile Browser Architecture
+- **Mobile-First Responsive Layout**:
+  - Full-width adaptive container with fluid padding (`px-3 sm:px-4 py-2.5 sm:py-3`).
+  - Mobile bottom navigation bar fixed to the bottom viewport on small devices (`sm:hidden`) providing instant 1-tap thumb navigation between **Home**, **Wallet & Deposits**, **Referral Rewards**, **Milestone Notifications**, and **Rental Handovers**.
+  - Adaptive top navigation bar with compact brand logo and dynamic role switcher pill ("Owner" / "Renter").
+  - Dropdown notification drawer and modal backdrops optimized with touch-friendly scroll containers (`overflow-y-auto`, `max-h-[90vh]`) and full-bleed mobile drawers (`p-2 sm:p-4`).
+- **Unified Action Triggers in Rental Cards**:
+  - Every rental card now provides direct access to:
+    - **Chat Modal (`openChatModal`)**: Real-time 3-second live polling messaging with delivery status.
+    - **Dispute Modal (`openDisputeModal`)**: Security deposit escrow freezing and claim submissions.
+    - **Handover & Return Inspections**: PIN verification and deposit release.
+    - **Granular Reviews**: 5-star ratings across specific item, owner, and renter criteria.
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:

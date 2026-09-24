@@ -66,28 +66,28 @@
 
   <!-- Header with Live Role Switcher -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
-          <i class="fa-solid fa-handshake-angle text-xl"></i>
+    <div class="max-w-6xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <i class="fa-solid fa-handshake-angle text-lg sm:text-xl"></i>
         </div>
         <div>
-          <span class="text-2xl font-black tracking-tight bg-gradient-to-r from-brand-700 to-emerald-600 bg-clip-text text-transparent">SHARENT</span>
-          <span class="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full">P2P Marketplace</span>
+          <span class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-brand-700 to-emerald-600 bg-clip-text text-transparent">SHARENT</span>
+          <span class="hidden md:inline-block ml-2 px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full">P2P Marketplace</span>
         </div>
       </div>
 
-      <!-- Center: Role Switcher Pill -->
-      <div class="bg-slate-100 p-1 rounded-xl flex items-center shadow-inner border border-slate-200/80">
+      <!-- Center: Role Switcher Pill (Responsive) -->
+      <div class="bg-slate-100 p-1 rounded-xl flex items-center shadow-inner border border-slate-200/80 flex-shrink-0">
         <button id="tab-owner-role" onclick="switchRole('owner')"
-          class="px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 bg-brand-600 text-white shadow-sm">
-          <i class="fa-solid fa-tags text-xs"></i>
-          <span>Owner Mode</span>
+          class="px-2.5 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 bg-brand-600 text-white shadow-sm cursor-pointer">
+          <i class="fa-solid fa-tags text-[11px] sm:text-xs"></i>
+          <span class="hidden xs:inline">Owner</span><span class="hidden sm:inline"> Mode</span>
         </button>
         <button id="tab-renter-role" onclick="switchRole('renter')"
-          class="px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-2 text-slate-600 hover:text-slate-900">
-          <i class="fa-solid fa-cart-shopping text-xs"></i>
-          <span>Renter Mode</span>
+          class="px-2.5 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer">
+          <i class="fa-solid fa-cart-shopping text-[11px] sm:text-xs"></i>
+          <span class="hidden xs:inline">Renter</span><span class="hidden sm:inline"> Mode</span>
         </button>
       </div>
 
@@ -284,6 +284,215 @@
     </div>
     
   </main>
+
+  <!-- ==================== REAL-TIME RENTAL CHAT MODAL (MODULE 19) ==================== -->
+  <div id="chat-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all h-[90vh] sm:h-[620px] flex flex-col">
+      <!-- Chat Header -->
+      <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-4 sm:p-5 text-white flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-black text-sm">
+            <i class="fa-solid fa-comments"></i>
+          </div>
+          <div>
+            <h4 id="chat-modal-title" class="text-base font-black tracking-tight leading-tight">Coordination Chat</h4>
+            <p id="chat-modal-subtitle" class="text-xs text-emerald-100 font-medium leading-tight mt-0.5">Rental Agreement Discussion</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeChatModal()" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Messages Feed Container -->
+      <div id="chat-messages-container" class="flex-1 p-4 sm:p-5 overflow-y-auto space-y-3 bg-slate-50 text-sm">
+        <div class="text-center text-xs text-slate-400 py-6">Loading messages...</div>
+      </div>
+
+      <!-- Chat Input Form -->
+      <form id="chat-send-form" onsubmit="sendCurrentChatMessage(event)" class="p-3 sm:p-4 bg-white border-t border-slate-100 flex items-center space-x-2">
+        <input type="hidden" id="chat-current-agreement-id" value="">
+        <input type="text" id="chat-input-text" required placeholder="Type a message (e.g. pickup time, return spot)..." class="flex-1 bg-slate-100 border-none px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+        <button type="submit" id="chat-send-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition flex items-center space-x-1.5 shadow-sm cursor-pointer whitespace-nowrap">
+          <span>Send</span>
+          <i class="fa-solid fa-paper-plane text-xs"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== DISPUTE & DAMAGE CLAIM MODAL (MODULE 18) ==================== -->
+  <div id="dispute-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all my-auto max-h-[95vh] flex flex-col">
+      <div class="bg-gradient-to-r from-rose-600 to-red-700 p-4 sm:p-5 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-black text-sm">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <h4 class="text-base font-black tracking-tight">File Dispute / Damage Claim</h4>
+            <p class="text-xs text-rose-100">Security Deposit Escrow Protection</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeDisputeModal()" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="dispute-form" onsubmit="submitDisputeClaim(event)" class="p-5 sm:p-6 overflow-y-auto space-y-4">
+        <input type="hidden" id="dispute-agreement-id" value="">
+        <input type="hidden" id="dispute-claimant-id" value="">
+
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-xs flex items-start space-x-2">
+          <i class="fa-solid fa-shield-halved text-amber-600 mt-0.5"></i>
+          <div>
+            <strong>Escrow Freeze Guarantee:</strong> Submitting this claim will immediately freeze the security deposit in escrow. No funds will be released until the dispute is resolved.
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Claim Reason / Category</label>
+          <select id="dispute-claim-type" required class="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none">
+            <option value="damage">Equipment Damage / Physical Wear</option>
+            <option value="missing_parts">Missing Accessories or Parts</option>
+            <option value="late_return">Severely Late Return</option>
+            <option value="not_working">Item Not Operational / Defective</option>
+            <option value="other">Other Violation</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Requested Damage Amount ($)</label>
+          <input type="number" step="0.01" min="1.0" id="dispute-amount" required placeholder="e.g. 50.00" class="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-rose-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Damage Description / Narrative</label>
+          <textarea id="dispute-description" rows="3" required placeholder="Provide specific details of the incident or damage observed upon return..." class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Photo Evidence URLs (Comma-separated)</label>
+          <input type="text" id="dispute-photo-urls" placeholder="e.g. /static/uploads/damage1.jpg, https://..." class="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none">
+        </div>
+
+        <div class="pt-2 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeDisputeModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 cursor-pointer">Cancel</button>
+          <button type="submit" id="submit-dispute-btn" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition flex items-center space-x-2 cursor-pointer">
+            <i class="fa-solid fa-gavel"></i>
+            <span>Submit Dispute & Freeze Deposit Escrow</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== SOCIAL REFERRAL PROGRAM MODAL (MODULE 17) ==================== -->
+  <div id="referral-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all my-auto max-h-[95vh] flex flex-col">
+      <div class="bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 p-4 sm:p-5 text-white flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center font-black text-sm">
+            <i class="fa-solid fa-gift"></i>
+          </div>
+          <div>
+            <h4 class="text-base font-black tracking-tight">Invite Friends & Earn Cash</h4>
+            <p class="text-xs text-purple-100">SHARENT Social Referral Program</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeReferralModal()" class="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5">
+        <!-- Dual Reward Banner -->
+        <div class="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200/80 rounded-2xl flex items-center justify-between text-xs">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-purple-700 block">Dual Bonus Scheme</span>
+            <div class="font-bold text-slate-800 text-sm mt-0.5">
+              You get <span id="ref-reward-amt" class="text-purple-700 font-black">$15.00</span> &bull; Friend gets <span id="ref-invitee-amt" class="text-indigo-700 font-black">$20.00</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-0.5">Reward triggers automatically when friend lists required active items!</p>
+          </div>
+          <div class="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-lg font-black shadow-md shadow-purple-500/20">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+          </div>
+        </div>
+
+        <!-- Referral Code & Share Link -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Your Unique Referral Code</label>
+          <div class="flex items-center space-x-2">
+            <div id="my-referral-code" class="flex-1 bg-slate-100 border border-slate-200 font-mono font-black text-base tracking-widest text-indigo-700 py-2.5 px-4 rounded-xl text-center">
+              LOADING...
+            </div>
+            <button type="button" onclick="copyReferralCode()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition cursor-pointer">
+              <i class="fa-regular fa-copy mr-1"></i> Copy
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Direct Invitation Link</label>
+          <div class="flex items-center space-x-2">
+            <input type="text" id="my-referral-link" readonly class="flex-1 bg-slate-50 border border-slate-200 text-xs px-3.5 py-2.5 rounded-xl font-mono text-slate-600 outline-none">
+            <button type="button" onclick="copyReferralLink()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition cursor-pointer">
+              <i class="fa-regular fa-copy mr-1"></i> Copy Link
+            </button>
+          </div>
+        </div>
+
+        <!-- 1-Click Multi-Channel Social Sharing -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Share Instantly Via</label>
+          <div class="grid grid-cols-4 gap-2">
+            <a id="share-whatsapp-btn" href="#" target="_blank" class="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 flex flex-col items-center justify-center text-xs font-bold transition">
+              <i class="fa-brands fa-whatsapp text-lg text-emerald-600 mb-1"></i>
+              <span>WhatsApp</span>
+            </a>
+            <a id="share-facebook-btn" href="#" target="_blank" class="p-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 flex flex-col items-center justify-center text-xs font-bold transition">
+              <i class="fa-brands fa-facebook text-lg text-blue-600 mb-1"></i>
+              <span>Facebook</span>
+            </a>
+            <a id="share-twitter-btn" href="#" target="_blank" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 flex flex-col items-center justify-center text-xs font-bold transition">
+              <i class="fa-brands fa-x-twitter text-lg text-slate-800 mb-1"></i>
+              <span>X / Twitter</span>
+            </a>
+            <a id="share-email-btn" href="#" target="_blank" class="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex flex-col items-center justify-center text-xs font-bold transition">
+              <i class="fa-solid fa-envelope text-lg text-rose-600 mb-1"></i>
+              <span>Email</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Referral Stats Overview -->
+        <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-100">
+          <div class="p-2.5 bg-slate-50 rounded-xl">
+            <div id="stat-total-invited" class="text-base font-black text-slate-800">0</div>
+            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Invited</div>
+          </div>
+          <div class="p-2.5 bg-slate-50 rounded-xl">
+            <div id="stat-pending-invited" class="text-base font-black text-amber-600">0</div>
+            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pending</div>
+          </div>
+          <div class="p-2.5 bg-slate-50 rounded-xl">
+            <div id="stat-earned-bonus" class="text-base font-black text-emerald-600">$0.00</div>
+            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Earned</div>
+          </div>
+        </div>
+
+        <!-- Recent Referrals Stream -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Referral Activity</label>
+          <div id="referrals-feed" class="space-y-2 max-h-40 overflow-y-auto">
+            <div class="text-center text-xs text-slate-400 py-3">No referrals yet. Share your code to start earning!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- ==================== NEW ITEM MODAL (OWNER - MODULE 4) ==================== -->
   <div id="item-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
@@ -2736,8 +2945,15 @@
           out += '    <h4 class="text-xs font-black text-slate-900">' + r.item_title + '</h4>';
           out += '    <p class="text-[11px] text-slate-500 mt-0.5">' + (currentRole === 'owner' ? 'Renter: <strong>' + r.renter_name + '</strong>' : 'Owner: <strong>' + r.owner_name + '</strong>') + ' &bull; ' + r.start_date + ' to ' + r.end_date + ' (' + r.total_days + ' days) &bull; Total: $' + r.total_amount.toFixed(2) + ' (Deposit: $' + r.security_deposit.toFixed(2) + ')</p>';
           out += '  </div>';
-          out += '  <div class="flex items-center space-x-2">';
+          var otherName = currentRole === 'owner' ? r.renter_name.replace(/'/g, "\\'") : r.owner_name.replace(/'/g, "\\'");
+          var chatBtn = '<button onclick="openChatModal(' + r.agreement_id + ', \'' + otherName + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer flex items-center space-x-1"><i class="fa-solid fa-comments text-emerald-600"></i><span>Chat</span></button>';
+          var disputeBtn = (r.status === 'active' || r.status === 'completed') ? 
+            '<button onclick="openDisputeModal(' + r.agreement_id + ')" class="px-2.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs cursor-pointer flex items-center space-x-1" title="Report Damage or File Claim"><i class="fa-solid fa-triangle-exclamation"></i><span>Dispute</span></button>' : '';
+
+          out += '  <div class="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">';
+          out += '    ' + chatBtn;
           out += '    ' + actionBtn;
+          out += '    ' + disputeBtn;
           out += '  </div>';
           out += '</div>';
         });
@@ -2985,6 +3201,31 @@
     }
 
   </script>
+
+  <!-- Mobile Bottom Action Bar (Fixed on mobile, hidden on sm and above) -->
+  <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 z-40 sm:hidden flex items-center justify-around shadow-lg">
+    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex flex-col items-center text-slate-600 hover:text-emerald-600">
+      <i class="fa-solid fa-house text-base"></i>
+      <span class="text-[10px] font-bold mt-0.5">Home</span>
+    </button>
+    <button onclick="openWalletModal()" class="flex flex-col items-center text-slate-600 hover:text-emerald-600">
+      <i class="fa-solid fa-wallet text-base text-emerald-600"></i>
+      <span class="text-[10px] font-bold mt-0.5">Wallet</span>
+    </button>
+    <button onclick="openReferralModal()" class="flex flex-col items-center text-slate-600 hover:text-purple-600">
+      <i class="fa-solid fa-gift text-base text-purple-600"></i>
+      <span class="text-[10px] font-bold mt-0.5">Referral</span>
+    </button>
+    <button onclick="toggleNotificationDropdown()" class="relative flex flex-col items-center text-slate-600 hover:text-indigo-600">
+      <i class="fa-solid fa-bell text-base"></i>
+      <span class="text-[10px] font-bold mt-0.5">Alerts</span>
+    </button>
+    <button onclick="document.getElementById('user-rentals-container').scrollIntoView({behavior: 'smooth'})" class="flex flex-col items-center text-slate-600 hover:text-blue-600">
+      <i class="fa-solid fa-handshake text-base text-blue-600"></i>
+      <span class="text-[10px] font-bold mt-0.5">Rentals</span>
+    </button>
+  </div>
+
 </body>
 </html>var currentUserWallet = {total: 20.0, cash: 0.0, promo: 20.0, transactions: []};
     var activeDepositChannel = 'bank_account';
@@ -3629,8 +3870,15 @@
           out += '    <h4 class="text-xs font-black text-slate-900">' + r.item_title + '</h4>';
           out += '    <p class="text-[11px] text-slate-500 mt-0.5">' + (currentRole === 'owner' ? 'Renter: <strong>' + r.renter_name + '</strong>' : 'Owner: <strong>' + r.owner_name + '</strong>') + ' &bull; ' + r.start_date + ' to ' + r.end_date + ' (' + r.total_days + ' days) &bull; Total: $' + r.total_amount.toFixed(2) + ' (Deposit: $' + r.security_deposit.toFixed(2) + ')</p>';
           out += '  </div>';
-          out += '  <div class="flex items-center space-x-2">';
+          var otherName = currentRole === 'owner' ? r.renter_name.replace(/'/g, "\\'") : r.owner_name.replace(/'/g, "\\'");
+          var chatBtn = '<button onclick="openChatModal(' + r.agreement_id + ', \'' + otherName + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer flex items-center space-x-1"><i class="fa-solid fa-comments text-emerald-600"></i><span>Chat</span></button>';
+          var disputeBtn = (r.status === 'active' || r.status === 'completed') ? 
+            '<button onclick="openDisputeModal(' + r.agreement_id + ')" class="px-2.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs cursor-pointer flex items-center space-x-1" title="Report Damage or File Claim"><i class="fa-solid fa-triangle-exclamation"></i><span>Dispute</span></button>' : '';
+
+          out += '  <div class="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">';
+          out += '    ' + chatBtn;
           out += '    ' + actionBtn;
+          out += '    ' + disputeBtn;
           out += '  </div>';
           out += '</div>';
         });
@@ -3878,5 +4126,30 @@
     }
 
   </script>
+
+  <!-- Mobile Bottom Action Bar (Fixed on mobile, hidden on sm and above) -->
+  <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 z-40 sm:hidden flex items-center justify-around shadow-lg">
+    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex flex-col items-center text-slate-600 hover:text-emerald-600">
+      <i class="fa-solid fa-house text-base"></i>
+      <span class="text-[10px] font-bold mt-0.5">Home</span>
+    </button>
+    <button onclick="openWalletModal()" class="flex flex-col items-center text-slate-600 hover:text-emerald-600">
+      <i class="fa-solid fa-wallet text-base text-emerald-600"></i>
+      <span class="text-[10px] font-bold mt-0.5">Wallet</span>
+    </button>
+    <button onclick="openReferralModal()" class="flex flex-col items-center text-slate-600 hover:text-purple-600">
+      <i class="fa-solid fa-gift text-base text-purple-600"></i>
+      <span class="text-[10px] font-bold mt-0.5">Referral</span>
+    </button>
+    <button onclick="toggleNotificationDropdown()" class="relative flex flex-col items-center text-slate-600 hover:text-indigo-600">
+      <i class="fa-solid fa-bell text-base"></i>
+      <span class="text-[10px] font-bold mt-0.5">Alerts</span>
+    </button>
+    <button onclick="document.getElementById('user-rentals-container').scrollIntoView({behavior: 'smooth'})" class="flex flex-col items-center text-slate-600 hover:text-blue-600">
+      <i class="fa-solid fa-handshake text-base text-blue-600"></i>
+      <span class="text-[10px] font-bold mt-0.5">Rentals</span>
+    </button>
+  </div>
+
 </body>
 </html>
