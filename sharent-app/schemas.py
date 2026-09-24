@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, model_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 class UserRegisterRequest(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=50)
@@ -493,3 +493,31 @@ class ChatThreadSummary(BaseModel):
     last_message: Optional[str] = None
     last_message_time: Optional[datetime] = None
     unread_count: int
+
+
+class NotificationDispatchTestRequest(BaseModel):
+    user_id: int
+    channel: str = Field(..., pattern="^(push|sms|email)$")
+    event_type: str
+    title: str
+    message: str
+    metadata_json: Optional[Dict[str, Any]] = None
+
+class NotificationEventResponse(BaseModel):
+    id: int
+    user_id: int
+    channel: str
+    event_type: str
+    title: str
+    message: str
+    destination: str
+    status: str
+    metadata_json: Optional[Dict[str, Any]] = None
+    is_read: bool
+    created_at: datetime
+
+class NotificationSummaryResponse(BaseModel):
+    user_id: int
+    total_notifications: int
+    unread_count: int
+    notifications: List[NotificationEventResponse]

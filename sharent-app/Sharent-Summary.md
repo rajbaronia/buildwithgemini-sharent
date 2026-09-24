@@ -372,6 +372,21 @@ rental_reviews (Airbnb-Style Multi-Criteria)
   - Modal with real-time 3-second live polling feed in `dashboard.html`.
   - Distinguishes outgoing messages (green right-aligned bubble with timestamp and read receipt status) from incoming messages (white left-aligned bubble with sender name).
 
+### Module 20: Push / SMS / Email Notification Engine for Rental Milestones
+- **Multi-Channel Notification Dispatch Engine**:
+  - Unified dispatcher supporting 3 communication channels: Push Notifications (`push`), Text Messages (`sms`), and Electronic Mail (`email`).
+  - Automatically captures recipient channel destination, delivery status, event categories, and structured JSON metadata payloads.
+- **Rental Milestone Event Triggers**:
+  - **Booking Requests**: Automatically fires high-priority alerts to the owner when a renter submits a rental agreement.
+  - **Payment Receipts & Escrow Confirmations**: Dispatches checkout transaction receipts with escrow deposit breakdown.
+  - **Return Inspection & Deadlines**: Schedules timely return reminders with return due times.
+  - **Dispute & Damage Claims**: Notifies affected parties when claims are filed, rebutted, or settled.
+  - **Chat Messages**: Real-time message alerts when new messages arrive while offline.
+- **Notification Center & Header Bell UI**:
+  - Notification bell with unread badge counter in `dashboard.html`.
+  - Dropdown drawer listing recent notifications with channel badges (Push, SMS, Email).
+  - 1-click "Mark all read" and individual read state transitions (`PUT /api/notifications/{id}/read` & `PUT /api/notifications/read-all/{user_id}`).
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:
@@ -435,6 +450,12 @@ cd /config/Desktop/BuildWithGemini/sharent-app
     - Tests reading conversation messages and automated unread-to-read transition.
     - Verifies reply dispatch with image attachments.
     - Rigorously validates 403 authorization checks preventing unauthorized 3rd-party snooping or messaging.
+
+19. `test_notification_engine.py`:
+    - Tests automatic notification dispatch upon rental agreement booking requests across push and email channels.
+    - Validates multi-channel simulation across SMS, Push, and Email with phone numbers, emails, and device token endpoints.
+    - Tests user notification summary endpoints and live unread counting.
+    - Verifies individual and batch "mark as read" state transitions.
 
 ## 6. How to Run Locally
 

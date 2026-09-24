@@ -350,3 +350,21 @@ class ChatMessage(Base):
     agreement = relationship('RentalAgreement', backref='messages')
     sender = relationship('User', foreign_keys=[sender_id])
     receiver = relationship('User', foreign_keys=[receiver_id])
+
+
+class NotificationEvent(Base):
+    __tablename__ = 'notification_events'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    channel = Column(String(50), nullable=False)  # push, sms, email
+    event_type = Column(String(100), nullable=False)  # booking_request, booking_confirmed, return_reminder, payment_receipt, dispute_filed, chat_message
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    destination = Column(String(200), nullable=False)  # email address, phone number, device token
+    status = Column(String(50), default='delivered')  # queued, sent, delivered, failed
+    metadata_json = Column(JSON, nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship('User', backref='notifications')

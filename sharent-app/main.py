@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker, UserReferral, DisputeClaim, ChatMessage
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker, UserReferral, DisputeClaim, ChatMessage, NotificationEvent
 from auth import (
     hash_password,
     verify_password,
@@ -62,6 +62,9 @@ from schemas import (
     ChatMessageSendRequest,
     ChatMessageResponse,
     ChatThreadSummary,
+    NotificationDispatchTestRequest,
+    NotificationEventResponse,
+    NotificationSummaryResponse,
 )
 
 
@@ -814,6 +817,17 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
     owner_name = f"{owner.first_name} {owner.last_name}" if owner else "Verified Owner"
     renter_name = f"{renter.first_name} {renter.last_name}"
 
+    # Trigger Notification Engine: New booking request for owner
+    dispatch_notification(
+        db=db,
+        user=agreement.owner,
+        event_type="booking_request",
+        title=f"New Booking Request: {item.title}",
+        message=f"{renter.first_name} requested to rent {item.title} for {agreement.total_days} days.",
+        channels=["push", "email"],
+        metadata_json={"agreement_id": agreement.id}
+    )
+
     return RentalAgreementResponse(
         id=agreement.id,
         agreement_code=f"SHR-AGR-{agreement.id:05d}",
@@ -1393,6 +1407,133 @@ def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # Module 19: In-App Real-Time Messaging & Chat Between Owners and Renters
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Module 20: Push / SMS / Email Notification Engine for Rental Milestones
+# ---------------------------------------------------------------------------
+
+def dispatch_notification(
+    db: Session,
+    user: User,
+    event_type: str,
+    title: str,
+    message: str,
+    channels: Optional[List[str]] = None,
+    metadata_json: Optional[dict] = None
+) -> List[NotificationEvent]:
+    if not channels:
+        channels = ["push", "sms", "email"]
+
+    created_events = []
+    for ch in channels:
+        dest = user.email if ch == "email" else (user.phone if ch == "sms" else f"device_push_{user.id:04d}")
+        notif = NotificationEvent(
+            user_id=user.id,
+            channel=ch,
+            event_type=event_type,
+            title=title,
+            message=message,
+            destination=dest,
+            status="delivered",
+            metadata_json=metadata_json or {},
+            is_read=False,
+            created_at=datetime.utcnow()
+        )
+        db.add(notif)
+        created_events.append(notif)
+        print(f"[NOTIFICATION DISPATCH ENGINE] [{ch.upper()}] Destination: {dest} | Type: {event_type} | {title} - {message}")
+
+    db.commit()
+    return created_events
+
+@app.post("/api/notifications/dispatch-test", response_model=NotificationEventResponse)
+def dispatch_test_notification(payload: NotificationDispatchTestRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == payload.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    events = dispatch_notification(
+        db=db,
+        user=user,
+        event_type=payload.event_type,
+        title=payload.title,
+        message=payload.message,
+        channels=[payload.channel],
+        metadata_json=payload.metadata_json
+    )
+    e = events[0]
+    return NotificationEventResponse(
+        id=e.id,
+        user_id=e.user_id,
+        channel=e.channel,
+        event_type=e.event_type,
+        title=e.title,
+        message=e.message,
+        destination=e.destination,
+        status=e.status,
+        metadata_json=e.metadata_json,
+        is_read=e.is_read,
+        created_at=e.created_at
+    )
+
+@app.get("/api/notifications/{user_id}", response_model=NotificationSummaryResponse)
+def get_user_notifications(user_id: int, unread_only: bool = False, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    query = db.query(NotificationEvent).filter(NotificationEvent.user_id == user_id)
+    if unread_only:
+        query = query.filter(NotificationEvent.is_read == False)
+
+    notifications = query.order_by(NotificationEvent.created_at.desc()).all()
+    unread_count = db.query(NotificationEvent).filter(
+        NotificationEvent.user_id == user_id,
+        NotificationEvent.is_read == False
+    ).count()
+
+    results = []
+    for n in notifications:
+        results.append(NotificationEventResponse(
+            id=n.id,
+            user_id=n.user_id,
+            channel=n.channel,
+            event_type=n.event_type,
+            title=n.title,
+            message=n.message,
+            destination=n.destination,
+            status=n.status,
+            metadata_json=n.metadata_json,
+            is_read=n.is_read,
+            created_at=n.created_at
+        ))
+
+    return NotificationSummaryResponse(
+        user_id=user_id,
+        total_notifications=len(results),
+        unread_count=unread_count,
+        notifications=results
+    )
+
+@app.put("/api/notifications/{notification_id}/read")
+def mark_notification_as_read(notification_id: int, db: Session = Depends(get_db)):
+    notif = db.query(NotificationEvent).filter(NotificationEvent.id == notification_id).first()
+    if not notif:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+    notif.is_read = True
+    db.commit()
+    return {"message": "Notification marked as read.", "id": notification_id}
+
+@app.put("/api/notifications/read-all/{user_id}")
+def mark_all_user_notifications_as_read(user_id: int, db: Session = Depends(get_db)):
+    db.query(NotificationEvent).filter(
+        NotificationEvent.user_id == user_id,
+        NotificationEvent.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+    return {"message": "All notifications marked as read.", "user_id": user_id}
+
 
 @app.post("/api/chat/messages", response_model=ChatMessageResponse)
 def send_chat_message(payload: ChatMessageSendRequest, db: Session = Depends(get_db)):

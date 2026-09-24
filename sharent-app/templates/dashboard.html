@@ -3203,6 +3203,58 @@
     
     var activeChatInterval = null;
 
+    
+    function toggleNotificationDropdown() {
+      var dd = document.getElementById('notif-dropdown');
+      dd.classList.toggle('hidden');
+      if (!dd.classList.contains('hidden')) {
+        loadNotifications();
+      }
+    }
+
+    function loadNotifications() {
+      fetch('/api/notifications/' + currentUserId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var badge = document.getElementById('notif-badge');
+          if (data.unread_count > 0) {
+            badge.innerText = data.unread_count;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+
+          var list = document.getElementById('notif-list');
+          if (!data.notifications || data.notifications.length === 0) {
+            list.innerHTML = '<div class="text-center text-slate-400 py-3">No notifications</div>';
+            return;
+          }
+
+          var html = '';
+          data.notifications.slice(0, 10).forEach(function(n) {
+            var iconClass = n.channel === 'sms' ? 'fa-comment-sms text-amber-500' : (n.channel === 'email' ? 'fa-envelope text-blue-500' : 'fa-bell text-emerald-500');
+            var bgClass = n.is_read ? 'bg-slate-50' : 'bg-emerald-50/50 border-l-2 border-emerald-500';
+            html += '<div class="p-2.5 rounded-xl ' + bgClass + '">';
+            html += '  <div class="flex items-center space-x-1.5 mb-1"><i class="fa-solid ' + iconClass + ' text-[10px]"></i><span class="font-bold text-slate-800">' + n.title + '</span></div>';
+            html += '  <p class="text-slate-600 leading-tight">' + n.message + '</p>';
+            html += '  <div class="text-[9px] text-slate-400 mt-1 uppercase tracking-wider font-semibold">' + n.channel + ' • ' + new Date(n.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</div>';
+            html += '</div>';
+          });
+          list.innerHTML = html;
+        })
+        .catch(function(e) { console.error('Error fetching notifications:', e); });
+    }
+
+    function markAllNotificationsRead() {
+      fetch('/api/notifications/read-all/' + currentUserId, { method: 'PUT' })
+        .then(function() {
+          loadNotifications();
+        });
+    }
+
+    // Auto-poll notifications on dashboard load
+    setTimeout(loadNotifications, 1000);
+
     function openChatModal(agreementId, otherPartyName, itemTitle) {
       document.getElementById('chat-current-agreement-id').value = agreementId;
       document.getElementById('chat-modal-title').innerText = otherPartyName || 'Rental Chat';
