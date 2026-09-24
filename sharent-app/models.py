@@ -26,6 +26,8 @@ class User(Base):
     is_phone_verified = Column(Boolean, default=False)
     referral_code = Column(String(32), unique=True, index=True, nullable=True)
     referred_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     @property
@@ -73,6 +75,9 @@ class Item(Base):
     video_url = Column(String(500), nullable=True)
 
     location_city = Column(String(80), default="San Ramon, CA")
+    location_address = Column(String(255), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     is_available = Column(Boolean, default=True)
     active_duration_days = Column(Integer, default=90)  # Planned/committed active duration in days (default 3 months)
     created_at = Column(DateTime, default=datetime.utcnow)

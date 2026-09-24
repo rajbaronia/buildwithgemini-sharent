@@ -485,6 +485,28 @@ cd /config/Desktop/BuildWithGemini/sharent-app
 
 ---
 
+
+---
+
+## 21. Module 21: Item Location Attribute & Proximity / Radius Search (Completed)
+
+### 21.1 Core Architecture & Objectives
+1. **Item Location Attribute**:
+   - Added `location_address` (String 255), `latitude` (Float), and `longitude` (Float) to each `Item`.
+   - **Default Inheritance**: If an Owner lists an Item without explicitly specifying an alternate location, the system automatically inherits the **Owner's registered address and coordinates** as the default pickup location.
+   - Owners can optionally specify a custom location address if equipment is stored at a separate workshop, garage, or warehouse.
+2. **Proximity & Vicinity Radius Search Engine**:
+   - Created [`geo_utils.py`](file:///config/Desktop/BuildWithGemini/sharent-app/geo_utils.py) implementing the Haversine great-circle distance algorithm returning exact distances in miles.
+   - Built-in geocoder mapping addresses, cities, and zip codes to coordinates.
+   - Marketplace API `GET /api/items/marketplace/{renter_id}?radius_miles=...&near_address=...` computes distance from the Renter's address or custom queried location, filters out items outside the radius limit, and sorts available items in ascending proximity order.
+3. **UI/UX Vicinity Controls**:
+   - Added a **Vicinity Search** toolbar on the Marketplace Catalog with a distance range selector (*Any Distance*, *Within 5 miles*, *Within 10 miles*, *Within 25 miles*, *Within 50 miles*) and near-city/zip input.
+   - Each item card dynamically renders a distance badge (e.g. `📍 5.8 mi`) alongside category and owner tags.
+   - The Item Listing modal features an **Item Storage / Pickup Location** input pre-populated with the user's profile address.
+4. **Automated Verification**:
+   - Created comprehensive test suite in [`test_item_location_and_vicinity_search.py`](file:///config/Desktop/BuildWithGemini/sharent-app/test_item_location_and_vicinity_search.py).
+   - **All 20 test suites passing 100%** (`20 passed in 29.20s`).
+
 ## 7. Recommended Next Steps
 
 1. **In-App Messaging & Real-Time Chat (Module 14)**:

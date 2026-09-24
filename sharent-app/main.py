@@ -1,3 +1,4 @@
+from geo_utils import resolve_coordinates, haversine_distance_miles
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -457,6 +458,21 @@ def create_item(payload: ItemCreateRequest, db: Session = Depends(get_db)):
     if not user.is_fully_verified:
         raise HTTPException(status_code=403, detail="Owner must be fully verified to list items.")
 
+    # Location resolution: Default to Owner's address if not provided or empty
+    final_location_address = payload.location_address.strip() if (payload.location_address and payload.location_address.strip()) else (user.address or "San Ramon, CA")
+    
+    # Resolve coordinates for item
+    if payload.latitude is not None and payload.longitude is not None:
+        item_lat, item_lon = payload.latitude, payload.longitude
+    else:
+        item_lat, item_lon = resolve_coordinates(final_location_address)
+
+    # Also backfill user coordinates if missing
+    if user.latitude is None or user.longitude is None:
+        u_lat, u_lon = resolve_coordinates(user.address)
+        user.latitude = u_lat
+        user.longitude = u_lon
+
     item = Item(
         owner_id=payload.owner_id,
         title=payload.title.strip(),
@@ -475,7 +491,10 @@ def create_item(payload: ItemCreateRequest, db: Session = Depends(get_db)):
         manual_url=payload.manual_url.strip() if payload.manual_url else None,
         brochure_url=payload.brochure_url.strip() if payload.brochure_url else None,
         video_url=payload.video_url.strip() if payload.video_url else None,
-        location_city=payload.location_city.strip(),
+        location_city=payload.location_city.strip() if payload.location_city else "San Ramon, CA",
+        location_address=final_location_address,
+        latitude=item_lat,
+        longitude=item_lon,
         is_available=True,
         active_duration_days=payload.active_duration_days if payload.active_duration_days is not None else 90,
     )
@@ -516,19 +535,71 @@ def get_my_listings(owner_id: int, db: Session = Depends(get_db)):
     return results
 
 @app.get("/api/items/marketplace/{renter_id}")
-def get_marketplace_items(renter_id: int, db: Session = Depends(get_db)):
-    items = db.query(Item).filter(
+def get_marketplace_items(
+    renter_id: int,
+    radius_miles: Optional[float] = None,
+    near_address: Optional[str] = None,
+    category: Optional[str] = None,
+    query: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    renter = db.query(User).filter(User.id == renter_id).first()
+    
+    # Determine renter reference coordinates for vicinity calculations
+    if near_address and near_address.strip():
+        center_lat, center_lon = resolve_coordinates(near_address.strip())
+    elif renter and renter.latitude is not None and renter.longitude is not None:
+        center_lat, center_lon = renter.latitude, renter.longitude
+    elif renter and renter.address:
+        center_lat, center_lon = resolve_coordinates(renter.address)
+        renter.latitude = center_lat
+        renter.longitude = center_lon
+        db.commit()
+    else:
+        center_lat, center_lon = resolve_coordinates("San Ramon, CA")
+
+    item_query = db.query(Item).filter(
         Item.owner_id != renter_id,
         Item.is_available == True
-    ).order_by(Item.id.desc()).all()
+    )
+
+    if category and category.strip() and category != "All":
+        item_query = item_query.filter(Item.category == category.strip())
+
+    items = item_query.order_by(Item.id.desc()).all()
 
     results = []
     for item in items:
+        # Ensure item has lat/lon coordinates
+        if item.latitude is None or item.longitude is None:
+            item_coords = resolve_coordinates(item.location_address or item.location_city or "San Ramon, CA")
+            item.latitude = item_coords[0]
+            item.longitude = item_coords[1]
+            db.commit()
+
+        # Compute vicinity / Haversine distance from renter's center point
+        dist = haversine_distance_miles(center_lat, center_lon, item.latitude, item.longitude)
+
+        # Filter out if radius_miles is supplied and exceeds limit
+        if radius_miles is not None and radius_miles > 0:
+            if dist > radius_miles:
+                continue
+
+        # Optional keyword query filter
+        if query and query.strip():
+            q_lower = query.strip().lower()
+            if q_lower not in item.title.lower() and q_lower not in item.description.lower() and q_lower not in item.category.lower() and (not item.location_address or q_lower not in item.location_address.lower()):
+                continue
+
         r = ItemResponse.model_validate(item)
         owner = db.query(User).filter(User.id == item.owner_id).first()
         r.owner_name = f"{owner.first_name} {owner.last_name}" if owner else "Community Member"
         r.images = item.images
+        r.distance_miles = dist
         results.append(r)
+
+    # Sort results by proximity (closest items first)
+    results.sort(key=lambda x: x.distance_miles if x.distance_miles is not None else 9999.0)
     return results
 
 

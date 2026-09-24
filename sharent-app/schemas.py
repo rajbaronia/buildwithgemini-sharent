@@ -60,6 +60,9 @@ class ItemCreateRequest(BaseModel):
     brochure_url: Optional[str] = None
     video_url: Optional[str] = None
     location_city: str = Field(default="San Ramon, CA")
+    location_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     active_duration_days: Optional[int] = Field(default=90)
 
     @model_validator(mode="after")
@@ -89,8 +92,11 @@ class ItemResponse(BaseModel):
     brochure_url: Optional[str] = None
     video_url: Optional[str] = None
     location_city: str
+    location_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    distance_miles: Optional[float] = None
     is_available: bool
-    active_duration_days: Optional[int] = 90
     active_duration_days: Optional[int] = 90
 
     model_config = ConfigDict(from_attributes=True)
