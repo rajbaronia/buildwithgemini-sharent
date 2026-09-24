@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker
 from auth import (
     hash_password,
     verify_password,
@@ -50,6 +50,9 @@ from schemas import (
     WithdrawalRequest,
     WalletDepositRequest,
     WalletDepositResponse,
+    PromotionalProgramConfigResponse,
+    PromotionalProgramConfigRequest,
+    UserBonusProgressResponse,
 )
 
 app = FastAPI(title="SHARENT Marketplace")
@@ -150,31 +153,108 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     }
 
 
-def get_or_create_user_wallet(user_id: int, db: Session) -> UserWallet:
+def get_or_create_user_wallet(user_id: int, db: Session, initial_credit: float = 0.0) -> UserWallet:
     wallet = db.query(UserWallet).filter(UserWallet.user_id == user_id).first()
     if not wallet:
-        # Credit initial $20.00 sign-up bonus
         wallet = UserWallet(
             user_id=user_id,
-            promotional_credit_balance=20.0,
+            promotional_credit_balance=initial_credit,
             withdrawable_cash_balance=0.0
         )
         db.add(wallet)
         db.commit()
         db.refresh(wallet)
+        if initial_credit > 0:
+            tx = WalletTransaction(
+                wallet_id=wallet.id,
+                user_id=user_id,
+                transaction_type="signup_bonus",
+                balance_type="promotional_credit",
+                amount=initial_credit,
+                description="Welcome Sign-Up Bonus Credit (Non-Withdrawable)",
+                created_at=datetime.utcnow()
+            )
+            db.add(tx)
+            db.commit()
+    return wallet
+
+def get_or_create_promotional_config(db: Session) -> PromotionalProgramConfig:
+    config = db.query(PromotionalProgramConfig).filter(PromotionalProgramConfig.program_key == "signup_inventory_listing_bonus").first()
+    if not config:
+        config = PromotionalProgramConfig(
+            program_key="signup_inventory_listing_bonus",
+            program_name="Sign-Up Inventory Listing Bonus",
+            bonus_amount=20.0,
+            required_active_items=10,
+            required_active_days=90,
+            is_active=True,
+            description="Earn $20.00 Sharent promotional bonus credit by listing at least 10 active items for at least 3 months (90 days)."
+        )
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    return config
+
+def evaluate_user_promotional_bonus(user_id: int, db: Session):
+    config = get_or_create_promotional_config(db)
+    if not config.is_active:
+        return None
+
+    tracker = db.query(UserBonusTracker).filter(
+        UserBonusTracker.user_id == user_id,
+        UserBonusTracker.program_key == config.program_key
+    ).first()
+
+    if not tracker:
+        tracker = UserBonusTracker(
+            user_id=user_id,
+            program_key=config.program_key,
+            bonus_awarded=False
+        )
+        db.add(tracker)
+        db.commit()
+        db.refresh(tracker)
+
+    if tracker.bonus_awarded:
+        return tracker
+
+    # Count qualifying items:
+    # 1. Owner is user_id
+    # 2. Item is currently active (is_available == True)
+    # 3. Active committed duration >= required_active_days (default 90 days / 3 months)
+    qualifying_items = db.query(Item).filter(
+        Item.owner_id == user_id,
+        Item.is_available == True,
+        Item.active_duration_days >= config.required_active_days
+    ).all()
+
+    qualifying_count = len(qualifying_items)
+
+    if config.required_active_items == 0 or qualifying_count >= config.required_active_items:
+        # Conditions met! Unlock and credit the sign-up bonus into user's wallet
+        wallet = get_or_create_user_wallet(user_id, db)
+        wallet.promotional_credit_balance = round(wallet.promotional_credit_balance + config.bonus_amount, 2)
 
         tx = WalletTransaction(
             wallet_id=wallet.id,
             user_id=user_id,
             transaction_type="signup_bonus",
             balance_type="promotional_credit",
-            amount=20.0,
-            description="Welcome Sign-Up Bonus Credit (Non-Withdrawable)",
+            amount=config.bonus_amount,
+            description=f"Unlocked Welcome Sign-Up Bonus (Listed {qualifying_count}/{config.required_active_items} active items for {config.required_active_days}+ days)",
             created_at=datetime.utcnow()
         )
         db.add(tx)
+
+        tracker.bonus_awarded = True
+        tracker.bonus_amount_awarded = config.bonus_amount
+        tracker.awarded_at = datetime.utcnow()
+        tracker.last_evaluated_at = datetime.utcnow()
         db.commit()
-    return wallet
+        db.refresh(tracker)
+
+    return tracker
+
 
 
 @app.post("/api/verify-otp")
@@ -317,10 +397,14 @@ def create_item(payload: ItemCreateRequest, db: Session = Depends(get_db)):
         video_url=payload.video_url.strip() if payload.video_url else None,
         location_city=payload.location_city.strip(),
         is_available=True,
+        active_duration_days=payload.active_duration_days if payload.active_duration_days is not None else 90,
     )
     db.add(item)
     db.commit()
     db.refresh(item)
+
+    # Evaluate conditional sign-up bonus criteria
+    evaluate_user_promotional_bonus(payload.owner_id, db)
 
     resp = ItemResponse.model_validate(item)
     resp.owner_name = f"{user.first_name} {user.last_name}"
@@ -1221,9 +1305,100 @@ def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
     )
 
 
+
+@app.get("/api/admin/promotions/signup-bonus", response_model=PromotionalProgramConfigResponse)
+def get_promotional_program_config(db: Session = Depends(get_db)):
+    config = get_or_create_promotional_config(db)
+    return PromotionalProgramConfigResponse(
+        program_key=config.program_key,
+        program_name=config.program_name,
+        bonus_amount=config.bonus_amount,
+        required_active_items=config.required_active_items,
+        required_active_days=config.required_active_days,
+        is_active=config.is_active,
+        description=config.description
+    )
+
+@app.put("/api/admin/promotions/signup-bonus", response_model=PromotionalProgramConfigResponse)
+def update_promotional_program_config(payload: PromotionalProgramConfigRequest, db: Session = Depends(get_db)):
+    config = get_or_create_promotional_config(db)
+    if payload.bonus_amount is not None:
+        if payload.bonus_amount < 0:
+            raise HTTPException(status_code=400, detail="Bonus amount cannot be negative.")
+        config.bonus_amount = payload.bonus_amount
+    if payload.required_active_items is not None:
+        if payload.required_active_items < 0:
+            raise HTTPException(status_code=400, detail="Required active items cannot be negative.")
+        config.required_active_items = payload.required_active_items
+    if payload.required_active_days is not None:
+        if payload.required_active_days < 1:
+            raise HTTPException(status_code=400, detail="Required active days must be at least 1.")
+        config.required_active_days = payload.required_active_days
+    if payload.is_active is not None:
+        config.is_active = payload.is_active
+    if payload.description is not None:
+        config.description = payload.description
+
+    db.commit()
+    db.refresh(config)
+    return PromotionalProgramConfigResponse(
+        program_key=config.program_key,
+        program_name=config.program_name,
+        bonus_amount=config.bonus_amount,
+        required_active_items=config.required_active_items,
+        required_active_days=config.required_active_days,
+        is_active=config.is_active,
+        description=config.description
+    )
+
+@app.get("/api/promotions/bonus-progress/{user_id}", response_model=UserBonusProgressResponse)
+def get_user_bonus_progress(user_id: int, db: Session = Depends(get_db)):
+    config = get_or_create_promotional_config(db)
+    tracker = db.query(UserBonusTracker).filter(
+        UserBonusTracker.user_id == user_id,
+        UserBonusTracker.program_key == config.program_key
+    ).first()
+
+    qualifying_items = db.query(Item).filter(
+        Item.owner_id == user_id,
+        Item.is_available == True,
+        Item.active_duration_days >= config.required_active_days
+    ).all()
+    q_count = len(qualifying_items)
+
+    is_awarded = tracker.bonus_awarded if tracker else False
+    awarded_date = tracker.awarded_at if tracker else None
+
+    # Calculate progress
+    needed = config.required_active_items
+    remaining = max(0, needed - q_count) if not is_awarded else 0
+    pct = 100.0 if is_awarded else round(min(100.0, (q_count / needed) * 100.0), 1)
+
+    if is_awarded:
+        msg = f"Congratulations! You unlocked your ${config.bonus_amount:.2f} Welcome Bonus by listing {q_count} active items for at least {config.required_active_days} days!"
+    else:
+        msg = f"List {remaining} more active item{'s' if remaining != 1 else ''} with at least {config.required_active_days} days commitment (3 months) to unlock your ${config.bonus_amount:.2f} bonus."
+
+    return UserBonusProgressResponse(
+        user_id=user_id,
+        bonus_awarded=is_awarded,
+        bonus_amount=config.bonus_amount,
+        required_active_items=config.required_active_items,
+        required_active_days=config.required_active_days,
+        qualifying_items_count=q_count,
+        items_remaining=remaining,
+        progress_percentage=pct,
+        awarded_at=awarded_date,
+        status_message=msg
+    )
+
+
 @app.get("/api/wallet/{user_id}", response_model=UserWalletResponse)
 def get_user_wallet(user_id: int, db: Session = Depends(get_db)):
     wallet = get_or_create_user_wallet(user_id, db)
+    # Evaluate promo bonus (e.g. if required_active_items == 0 or listings met)
+    evaluate_user_promotional_bonus(user_id, db)
+    db.refresh(wallet)
     txs = db.query(WalletTransaction).filter(WalletTransaction.user_id == user_id).order_by(WalletTransaction.created_at.desc()).all()
     
     tx_list = [

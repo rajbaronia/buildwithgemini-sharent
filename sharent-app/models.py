@@ -72,6 +72,7 @@ class Item(Base):
 
     location_city = Column(String(80), default="San Ramon, CA")
     is_available = Column(Boolean, default=True)
+    active_duration_days = Column(Integer, default=90)  # Planned/committed active duration in days (default 3 months)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     owner = relationship("User", backref="items")
@@ -219,6 +220,35 @@ class RentalReview(Base):
     reviewer = relationship('User', foreign_keys=[reviewer_id])
     reviewee = relationship('User', foreign_keys=[reviewee_id])
     item = relationship('Item')
+
+
+
+class PromotionalProgramConfig(Base):
+    __tablename__ = 'promotional_program_configs'
+
+    id = Column(Integer, primary_key=True, index=True)
+    program_key = Column(String, unique=True, nullable=False, default="signup_inventory_listing_bonus")
+    program_name = Column(String, nullable=False, default="Sign-Up Inventory Listing Bonus")
+    bonus_amount = Column(Float, nullable=False, default=20.0)
+    required_active_items = Column(Integer, nullable=False, default=10)
+    required_active_days = Column(Integer, nullable=False, default=90)  # 3 months
+    is_active = Column(Boolean, default=True)
+    description = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserBonusTracker(Base):
+    __tablename__ = 'user_bonus_trackers'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=False)
+    program_key = Column(String, default="signup_inventory_listing_bonus", nullable=False)
+    bonus_awarded = Column(Boolean, default=False)
+    bonus_amount_awarded = Column(Float, default=0.0)
+    awarded_at = Column(DateTime, nullable=True)
+    last_evaluated_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship('User')
 
 
 class UserWallet(Base):

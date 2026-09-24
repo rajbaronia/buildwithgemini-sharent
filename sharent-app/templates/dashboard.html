@@ -3141,6 +3141,36 @@
       txList.innerHTML = out;
     }
 
+    
+    function loadBonusProgress() {
+      fetch('/api/promotions/bonus-progress/' + currentUserId)
+        .then(function(res) { return res.json(); })
+        .then(function(p) {
+          var bar = document.getElementById('bonus-progress-bar');
+          var frac = document.getElementById('bonus-progress-fraction');
+          var pct = document.getElementById('bonus-progress-pct');
+          var stat = document.getElementById('bonus-banner-status');
+          var bAmt = document.getElementById('bonus-banner-amount');
+          var badge = document.getElementById('bonus-awarded-badge');
+
+          if (bAmt) bAmt.innerText = '$' + p.bonus_amount.toFixed(2) + ' Bonus';
+          if (stat) stat.innerText = p.status_message;
+          if (bar) bar.style.width = p.progress_percentage + '%';
+          if (frac) frac.innerText = p.qualifying_items_count + ' / ' + p.required_active_items + ' Active Items Listed (' + p.required_active_days + '+ Days Active)';
+          if (pct) pct.innerText = p.progress_percentage + '% Complete';
+
+          if (badge) {
+            if (p.bonus_awarded) {
+              badge.classList.remove('hidden');
+              bar.className = 'bg-emerald-500 h-2 rounded-full transition-all duration-500';
+            } else {
+              badge.classList.add('hidden');
+            }
+          }
+        })
+        .catch(function(e) { console.error('Error loading bonus progress:', e); });
+    }
+
     function loadUserWallet() {
       fetch('/api/wallet/' + currentUserId)
         .then(function(res) { return res.json(); })
@@ -3149,6 +3179,7 @@
           currentUserWallet.cash = data.withdrawable_cash_balance;
           currentUserWallet.promo = data.promotional_credit_balance;
           currentUserWallet.transactions = data.transactions || [];
+          loadBonusProgress();
 
           var navEl = document.getElementById('nav-wallet-balance');
           if (navEl) navEl.innerText = '$' + data.total_balance.toFixed(2);

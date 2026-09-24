@@ -27,6 +27,9 @@ def test_user_a_b_c_exact_promotional_credit_scenario():
     - Now user B has $47 credit balance ($20 original bonus credit + $27 rent earnings). However, user B can NOT deposit this $47 into his PayPal account, since all of it came from bonus ($20 from his own bonus, and $27 from others bonus)
     """
 
+    # Set required_active_items to 0 for this immediate bonus scenario
+    client.put("/api/admin/promotions/signup-bonus", json={"required_active_items": 0})
+
     # 1. Register User A, B, C and verify dual OTP
     users = {}
     for name, uname, email in [("User A", "user_a", "usera@test.com"),

@@ -291,6 +291,28 @@ rental_reviews (Airbnb-Style Multi-Criteria)
   - Interactive filter pills to view *All*, *Deposits*, *Payments*, and *Earnings*.
   - Reference tracking tags (e.g. `DEP-GPAY-XXXXXX`, `DEP-ACH-XXXXXX`, `DEP-PP-XXXXXX`, `DEP-VENMO-XXXXXX`).
 
+### Module 16: Conditional Sign-Up Bonus Program (Inventory Listing & Active Duration Requirements with Dynamic Platform Configuration)
+- **Goal-Oriented Sign-Up Bonus Program**:
+  - Rather than granting promotional credits immediately upon registration, credits are unlocked only when the user satisfies marketplace supply onboarding prerequisites.
+  - **Prerequisite Condition**:
+    1. List at least **10 new Items** into their inventory.
+    2. Maintain them as **Active** (`is_available = True`) with a commitment duration of at least **3 months (90 days)**.
+- **Dynamic Platform Configuration (`PromotionalProgramConfig`)**:
+  - Prerequisite conditions are fully parameterized platform variables that SHARENT administrators can change over time without redeployment:
+    - `bonus_amount` (default: **$20.00**)
+    - `required_active_items` (default: **10 items**)
+    - `required_active_days` (default: **90 days / 3 months**)
+    - `is_active` (toggleable program status)
+- **Administrative APIs & Dynamic Threshold Tuning**:
+  - `GET /api/admin/promotions/signup-bonus`: Returns current promotion rules, bonus amount, item requirement, and duration threshold.
+  - `PUT /api/admin/promotions/signup-bonus`: Dynamically adjust bonus amount, required items, or active days in real time.
+- **User Bonus Qualification Tracker & Auto-Credit**:
+  - `GET /api/promotions/bonus-progress/{user_id}`: Real-time progress tracker reporting items listed, items remaining, completion percentage, and unlock status.
+  - Automatic evaluation triggers when items are created or toggled active/inactive.
+  - Once the threshold is met, the bonus is automatically unlocked and credited to the user's `UserWallet.promotional_credit_balance` with a verifiable audit transaction.
+- **Milestone Progress UI**:
+  - Interactive milestone tracker card with gradient progress bar in the Sharent Wallet Modal and inventory dashboard showing real-time progress toward unlocking the sign-up bonus.
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:
@@ -328,6 +350,11 @@ cd /config/Desktop/BuildWithGemini/sharent-app
     - Validates deposit reference codes, instant credit to `withdrawable_cash_balance`, and updated `total_balance`.
     - Confirms rejection of invalid amounts (<= 0) and unsupported channels.
     - Validates withdrawing deposited funds back out to external accounts while enforcing non-withdrawable limits on promotional credits.
+
+15. `test_conditional_signup_bonus.py`:
+    - Tests the conditional sign-up bonus lifecycle: 0 items listed ($0 balance) -> 9 items listed ($0 balance) -> 10th item listed with < 90 days commitment ($0 balance) -> 10th item listed with 90-day active commitment (automatically unlocks $20.00 bonus credit).
+    - Tests dynamic platform variable updates via `PUT /api/admin/promotions/signup-bonus` (updating requirement to 3 items and $35.00 bonus).
+    - Verifies another user qualifying under the dynamically updated thresholds.
 
 ## 6. How to Run Locally
 

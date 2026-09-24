@@ -59,6 +59,7 @@ class ItemCreateRequest(BaseModel):
     brochure_url: Optional[str] = None
     video_url: Optional[str] = None
     location_city: str = Field(default="San Ramon, CA")
+    active_duration_days: Optional[int] = Field(default=90)
 
     @model_validator(mode="after")
     def check_duration_range(self):
@@ -88,6 +89,8 @@ class ItemResponse(BaseModel):
     video_url: Optional[str] = None
     location_city: str
     is_available: bool
+    active_duration_days: Optional[int] = 90
+    active_duration_days: Optional[int] = 90
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -127,6 +130,7 @@ class CalendarRangeCheckRequest(BaseModel):
 
 class CalendarRangeCheckResponse(BaseModel):
     is_available: bool
+    active_duration_days: Optional[int] = 90
     total_days: int
     reason: Optional[str] = None
     daily_rate: float
@@ -137,6 +141,7 @@ class CalendarRangeCheckResponse(BaseModel):
 class ItemStatusToggleRequest(BaseModel):
     owner_id: int
     is_available: bool
+    active_duration_days: Optional[int] = 90
 
 
 class RentalQuoteResponse(BaseModel):
@@ -359,3 +364,32 @@ class WithdrawalRequest(BaseModel):
     amount: float
     destination_type: str  # paypal, bank_transfer, venmo
     destination_account: str
+
+
+class PromotionalProgramConfigResponse(BaseModel):
+    program_key: str
+    program_name: str
+    bonus_amount: float
+    required_active_items: int
+    required_active_days: int
+    is_active: bool
+    description: Optional[str] = None
+
+class PromotionalProgramConfigRequest(BaseModel):
+    bonus_amount: Optional[float] = None
+    required_active_items: Optional[int] = None
+    required_active_days: Optional[int] = None
+    is_active: Optional[bool] = None
+    description: Optional[str] = None
+
+class UserBonusProgressResponse(BaseModel):
+    user_id: int
+    bonus_awarded: bool
+    bonus_amount: float
+    required_active_items: int
+    required_active_days: int
+    qualifying_items_count: int
+    items_remaining: int
+    progress_percentage: float
+    awarded_at: Optional[datetime] = None
+    status_message: str

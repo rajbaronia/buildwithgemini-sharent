@@ -13,6 +13,9 @@ def setup_db():
     yield
 
 def test_multi_channel_wallet_deposits_and_transaction_history():
+    # Set required_active_items to 0 so new user receives initial bonus
+    client.put("/api/admin/promotions/signup-bonus", json={"required_active_items": 0})
+
     # 1. Register and verify user
     reg = client.post("/api/register", json={
         "first_name": "David", "last_name": "Depositor", "email": "david@deposit.com",
