@@ -1,248 +1,227 @@
-# SHARENT – Comprehensive Project Session Summary
+# Sharent: Peer-to-Peer Neighborhood Equipment & Tool Sharing Platform
+**Project Architecture, Evolution, Database Schema, and Continuation Manual**
 
-> **Document Name**: `Sharent-Summary.md`  
-> **Project**: SHARENT (Peer-to-Peer Rental Marketplace for Household Goods)  
-> **Tagline**: *"The Airbnb of Everything Else"*  
-> **Last Updated**: September 23, 2026  
-> **GitHub Repository**: [https://github.com/rajbaronia/buildwithgemini-sharent](https://github.com/rajbaronia/buildwithgemini-sharent)  
-> **Status**: Production-Ready Prototype (Modules 1–9 Fully Implemented & 100% Tested)
+> **Current Repository**: [https://github.com/rajbaronia/buildwithgemini-sharent](https://github.com/rajbaronia/buildwithgemini-sharent)  
+> **Platform Version**: 1.0.0 (Modules 1 through 13 Completed)  
+> **Language & Frameworks**: Python 3.13, FastAPI, SQLAlchemy ORM, SQLite, Jinja2, TailwindCSS, FontAwesome 6, Pytest
 
 ---
 
-## 1. Executive Summary & Startup Overview
+## 1. Executive Summary & Problem Mission
 
-### Mission
-To empower communities to **make money, save money, and save the environment** by fostering reuse and circular sharing through peer-to-peer household item rentals.
+### Problem Statement
+High-utility equipment, lawn care tools, carpet cleaners, pressure washers, and DIY power tools often sit idle in residential garages for 95% of their lifespan. Simultaneously, neighbors frequently purchase expensive single-use equipment or rent from commercial supply stores located far away, requiring cumbersome logistics, steep fees, and high friction.
 
-### Background & Value Proposition
-- **The Problem**: 80% of household products (power tools, carpet cleaners, lawn equipment, camping gear, party supplies, wedding apparel) are used fewer than 6 times per year. Significant consumer capital is locked in depreciating assets whose utility is rarely realized.
-- **The Solution**: SHARENT connects item Owners with local Renters seeking short-term usage fees instead of buying new, while mitigating transactional risks via security deposits, verified identity, dual-factor OTP, equipment insurance protection, legally binding rental agreements, and escrow holds.
-
----
-
-## 2. Technical Stack & Environment
-
-| Component | Technology | Version / Details |
-|---|---|---|
-| **Backend Framework** | FastAPI (Python) | High-performance async API with Pydantic schemas |
-| **Python Environment** | Python 3.13 Virtualenv | `/config/Desktop/BuildWithGemini/sharent-app/.venv` |
-| **Database** | SQLite + SQLAlchemy ORM | Local database at `/config/Desktop/BuildWithGemini/sharent-app/sharent.db` |
-| **Frontend** | Responsive HTML5 / TailwindCSS / FontAwesome | Dynamic vanilla JS (zero external build tools required) |
-| **Authentication & Security** | Passlib (PBKDF2/bcrypt) + Dual-Channel OTP | Random 6-digit codes for Email and SMS with dispatch simulator |
-| **File Storage** | Local multi-part file uploads | `/config/Desktop/BuildWithGemini/sharent-app/static/uploads/` |
-| **Testing Framework** | Pytest + Starlette TestClient | 10 comprehensive test suites passing 100% |
-| **Default Server Port** | `0.0.0.0:8000` | Run via `uvicorn main:app --host 0.0.0.0 --port 8000` |
+### Solution
+**Sharent** is a hyper-local, peer-to-peer equipment sharing marketplace enabling neighbors to monetize idle tools safely and rent equipment nearby with zero hassle. Sharent solves the traditional trust barrier through:
+- Dual-channel verified user accounts (Email + SMS OTP).
+- Transparent fee itemization and escrow security deposit protection.
+- Binding digital rental agreements with mandatory safety acknowledgments.
+- Contactless/in-person 4-digit Handover PIN verification at pickup.
+- Multi-point return inspections with automated 100% escrow refunds.
+- **Airbnb-style multi-criteria reviews** evaluating specific quality dimensions for the Item, Owner, and Renter.
 
 ---
 
-## 3. Architecture & Project File Structure
+## 2. Technology Stack & Directory Architecture
 
 ```
 /config/Desktop/BuildWithGemini/
-├── Sharent-Summary.md                  # Comprehensive session summary (root copy)
-├── project_brief.md                    # Project brief & requirements specification
+├── Sharent-Summary.md              # Master project summary (this document)
 └── sharent-app/
-    ├── Sharent-Summary.md              # Mirror copy of session summary
-    ├── main.py                         # FastAPI routes, endpoints, static mounts
-    ├── models.py                       # SQLAlchemy ORM models (User, Item, ItemAvailability, RentalAgreement, PaymentTransaction)
-    ├── schemas.py                      # Pydantic validation models (Requests & Responses)
-    ├── auth.py                         # Password hashing, dual OTP generation, dispatch simulator & verification
+    ├── main.py                     # FastAPI application endpoints & lifespan handlers
+    ├── models.py                   # SQLAlchemy ORM data models
+    ├── schemas.py                  # Pydantic request/response schemas
+    ├── auth.py                     # Password hashing & OTP dispatch simulation
+    ├── database.py                 # SQLite database connection & session setup
+    ├── sharent.db                  # Local SQLite database file
     ├── templates/
-    │   ├── register.html               # User registration with simulated Dual OTP modal
-    │   ├── login.html                  # 2FA User login (Username + Password + Email/SMS OTP)
-    │   └── dashboard.html              # Unified Owner/Renter dashboard, List an Item, Calendar, Quote, Agreement & Checkout
+    │   ├── landing.html            # Marketing landing page & sign-in modal
+    │   └── dashboard.html          # Unified Owner/Renter dashboard with role toggle & modals
     ├── static/
-    │   └── uploads/                    # Directory storing multi-photo listing uploads
-    ├── test_registration.py            # User registration & duplicate checks
-    ├── test_login.py                   # Password validation & 2FA login
-    ├── test_roles_and_items.py         # Role switching & item management
-    ├── test_item_listing_advanced.py   # Multi-photo upload & duration limit validations
-    ├── test_calendar_availability.py   # Airbnb calendar date blocking & range validations
-    ├── test_item_activation_toggle.py  # Owner activation/deactivation show/hide lifecycle
-    ├── test_quote_api.py               # Renter charges itemization & fee breakdown calculations
-    ├── test_rental_agreement.py        # Legal terms & mandatory acknowledgment validation
-    ├── test_payment_checkout.py        # Card authorization, escrow deposit hold & Handover PIN
-    └── sharent.db                      # SQLite database file
+    │   └── uploads/                # User-uploaded equipment photos
+    ├── test_*.py                   # 12 comprehensive Pytest test suites (100% pass)
+    └── .venv/                      # Python virtual environment
 ```
 
 ---
 
-## 4. Modules Built & How the Platform Evolved
+## 3. Database Schema Overview
 
-### Module 1: User Registration with Dual OTP Verification
-- **Requirements**: First Name, Last Name, Email, Phone Number, Physical Address, unique Username, and Password.
-- **Implementation**:
-  - Validates format and checks uniqueness on email, phone, and username.
-  - Generates independent 6-digit cryptographic security codes for **both Email and Phone**.
-  - Built-in **Terminal & UI Dispatch Simulator**: When testing locally, generated OTP codes are visibly provided in simulated hint banners, enabling frictionless testing.
-  - Verification API (`POST /api/verify-otp`) requires both channels before unlocking the verified status.
-  - Added instant dashboard verification helper (`POST /api/verify-otp-direct/{user_id}`) for fast test-user onboarding.
+```
+users
+├── id (Integer, PK)
+├── first_name, last_name, username, email, phone, address
+├── password_hash
+├── is_email_verified, is_phone_verified
+├── active_role ("owner" | "renter")
+└── created_at
 
-### Module 2: 2FA User Login
-- **Requirements**: Login using Username and Password, followed by Email or Phone OTP validation.
-- **Implementation**:
-  - Two-stage authentication pipeline:
-    1. `POST /api/login/initiate`: Verifies username and password hash. Generates a 6-digit OTP dispatched to user's choice of Email or SMS.
-    2. `POST /api/login/complete`: Validates the submitted OTP against expiration windows and unlocks the user session.
+otp_verifications
+├── id (Integer, PK)
+├── user_id (FK -> users.id)
+├── channel ("email" | "phone")
+├── otp_code (6-digit random code)
+├── expires_at, is_used, created_at
 
-### Module 3: Seamless Dual-Role Switching (Owner ⇄ Renter)
-- **Requirements**: Within the same authenticated session, a user can dynamically switch between being an **Owner** (listing and monetizing items) and a **Renter** (browsing, inspecting, and renting items from other members).
-- **Implementation**:
-  - Header toggle pill with active state tracking (`/api/session/switch-role`).
-  - **Owner View**: Inventory cards, earnings potential metric, quick access to "List an Item" modal, calendar availability management.
-  - **Renter View**: Marketplace catalog of other owners' items, search/category filters, price badges, and "Rent Now" action buttons.
+items
+├── id (Integer, PK)
+├── owner_id (FK -> users.id)
+├── title, category, condition, description, location_city
+├── base_rate_daily, security_deposit, item_value
+├── min_rental_days, max_rental_days
+├── deposit_required, insurance_required
+├── manual_url, youtube_tutorial_url
+├── is_active (Boolean: True = visible in catalog, False = hidden)
+└── created_at
 
-### Module 4: Advanced Item Listing & Resource Links
-- **Requirements**: Prompts Owner for Title, Category, Description, Condition, Daily Base Rate, Min & Max Rental Duration, Security Deposit, Insurance Requirement, and multiple Photo uploads. Also external links for Product Brochures, Operating Instructions (PDF), and YouTube How-to Videos.
-- **Implementation**:
-  - Multi-photo upload endpoint (`POST /api/upload-images`) saving files to `static/uploads/` with live client-side image preview cards and removal chips.
-  - Pydantic schema validation preventing invalid duration ranges (`min_rental_days <= max_rental_days`).
-  - Item detail modal with tabs/badges for external PDF manuals, manufacturer brochures, and an **embedded YouTube video player** if a YouTube link is supplied.
+item_images
+├── id (Integer, PK)
+├── item_id (FK -> items.id)
+├── image_url, is_primary
+└── created_at
 
-### Module 5: Airbnb-Style Availability Calendar
-- **Requirements**: Interactive calendar displaying available, blocked, and rented dates.
-- **Implementation**:
-  - Database model `ItemAvailability` tracking date states (`available`, `blocked`, `booked`).
-  - Owner control: 1-click date toggle (`POST /api/items/{item_id}/availability/toggle`) to block dates for personal use or scheduled maintenance.
-  - Renter control: Interactive start-date and return-date range selection.
-  - Range validation endpoint (`POST /api/items/{item_id}/availability/check-range`) ensuring no blocked dates overlap and duration matches Owner's min/max limits.
+item_availability
+├── id (Integer, PK)
+├── item_id (FK -> items.id)
+├── date (Date)
+├── status ("available" | "booked" | "maintenance")
+└── created_at
 
-### Module 6: Listing Activation / Deactivation (Marketplace Show / Hide)
-- **Requirements**: Owner can activate or deactivate any listing. Deactivated items are hidden from Renters on the marketplace but remain in the Owner's inventory with full data preserved.
-- **Implementation**:
-  - Owner-protected endpoint: `POST /api/items/{item_id}/toggle-status`.
-  - Visual status pill on Owner inventory cards:
-    - Active: `● Live & Listed`
-    - Deactivated: `○ Deactivated (Hidden)`
-  - 1-click toggle buttons (`Deactivate` / `Activate`).
-  - Marketplace queries automatically filter out inactive items.
+rental_agreements
+├── id (Integer, PK)
+├── agreement_code (e.g. "AGR-12345678")
+├── item_id (FK -> items.id)
+├── renter_id (FK -> users.id)
+├── owner_id (FK -> users.id)
+├── start_date, end_date (Date)
+├── total_days (Integer)
+├── daily_rate, base_rental_fee, platform_fee, insurance_fee, security_deposit, grand_total (Float)
+├── accepted_terms, accepted_deposit_policy, accepted_safety_rules (Boolean)
+├── agreed_at (DateTime)
+└── status ("pending_payment" | "confirmed" | "active" | "completed" | "cancelled")
 
-### Module 7: Renter Charges Itemization & Fee Breakdown
-- **Requirements**: Upon selecting rental dates in Renter Mode, the platform itemizes all fees and displays the grand total due.
-- **Implementation**:
-  - Endpoint: `POST /api/items/{item_id}/quote`.
-  - Itemized Fee Components:
-    1. **Base Usage Rental**: `Daily Rate × Total Rental Days`.
-    2. **SHARENT Platform Service Fee**: `5% of base rent + $1.00 fixed transaction fee`.
-    3. **Equipment Protection / Insurance Fee**: `8% of base rent (min $3.00)` if owner marked insurance as required.
-    4. **Refundable Escrow Security Deposit**: Highlighted in dedicated escrow card (`100% refunded when item is returned in agreed condition`).
-    5. **Total Due Now**: Grand total of rental + fees + refundable deposit.
-  - Modal with **`← Back to Calendar`** and **`Review & Agree to Rental Terms →`** buttons.
+payment_transactions
+├── id (Integer, PK)
+├── agreement_id (FK -> rental_agreements.id)
+├── renter_id (FK -> users.id)
+├── transaction_code (e.g. "TXN-87654321")
+├── payment_method ("credit_card")
+├── card_last4 ("4242")
+├── amount_charged, escrow_deposit_held, total_paid (Float)
+├── handover_pin (4-digit random string, e.g. "7482")
+├── payment_status ("paid_escrow_held" | "deposit_refunded")
+└── created_at
+
+rental_handover_inspections
+├── id (Integer, PK)
+├── agreement_id (FK -> rental_agreements.id)
+├── pickup_verified_at (DateTime)
+├── pickup_notes (Text)
+├── return_verified_at (DateTime)
+├── condition_on_return ("like_new" | "good" | "damaged")
+├── all_accessories_returned, cleaned_properly (Boolean)
+├── deposit_refund_status ("refunded_100_percent" | "dispute_held")
+├── deposit_refunded_amount (Float)
+└── inspection_notes (Text)
+
+rental_reviews (Airbnb-Style Multi-Criteria)
+├── id (Integer, PK)
+├── agreement_id (FK -> rental_agreements.id)
+├── reviewer_id (FK -> users.id)
+├── reviewee_id (FK -> users.id)
+├── item_id (FK -> items.id, nullable)
+├── role ("renter_to_owner" | "owner_to_renter")
+├── rating (Float: exact mathematical average of attributes)
+├── comment (Text)
+├── tags (Comma-separated compliment badges)
+├── created_at (DateTime)
+│   # 1. Item Rating Attributes (Rated by Renter)
+├── item_accuracy (1 to 5)
+├── item_condition (1 to 5)
+├── item_ease_of_use (1 to 5)
+├── item_instructions (1 to 5)
+├── item_value (1 to 5)
+│   # 2. Owner Rating Attributes (Rated by Renter)
+├── owner_response_time (1 to 5)
+├── owner_communication (1 to 5)
+├── owner_friendliness (1 to 5)
+├── owner_pickup_ease (1 to 5)
+├── owner_return_ease (1 to 5)
+│   # 3. Renter Rating Attributes (Rated by Owner)
+├── renter_communication (1 to 5)
+├── renter_responsibility (1 to 5)
+├── renter_friendliness (1 to 5)
+├── renter_care_of_item (1 to 5)
+└── renter_return_condition (1 to 5)
+```
+
+---
+
+## 4. Module-by-Module Evolution
+
+### Module 1: Dual-Channel User Registration & OTP Verification
+- Registration collects: first/last name, username, email, phone, address, and password.
+- Two simulated OTP codes (6 digits) sent to email and SMS phone number.
+- Registration complete only when both channels are verified (`is_email_verified=True` and `is_phone_verified=True`).
+
+### Module 2: Secure Two-Factor Authentication (2FA) Login
+- Renders dual-channel 2FA login verification modal.
+- Protects unauthorized account takeovers.
+
+### Module 3: Dynamic Owner ⇄ Renter Role Switching
+- Single user account can switch between **Owner Mode** and **Renter Mode** with 1 click.
+- Persistent in database (`users.active_role`).
+- Owner view displays Inventory Management; Renter view displays Equipment Catalog.
+
+### Module 4: Advanced Item Listing with Photo Upload & YouTube/Manual Links
+- Item creation modal with drag-and-drop / file upload for multiple equipment photos.
+- Stores photos in `/static/uploads/`.
+- Fields for operating manual PDF links and YouTube video tutorial URLs.
+- Video tutorial embedded directly into the Item Detail modal.
+
+### Module 5: Interactive Availability Calendar & Booking Prevention
+- Airbnb-style interactive calendar per item.
+- Visual date indicators: Available (green), Booked (amber/red), Maintenance (gray).
+- Prevents double-booking and locks past dates.
+
+### Module 6: Listing Show/Hide Marketplace Toggle
+- Toggle switch in Owner Inventory allows owners to activate/deactivate listings with 1 click.
+- Deactivated items stay visible in Owner's Inventory but are hidden from Renters in the catalog.
+
+### Module 7: Transparent Renter Charges Itemization & Fee Breakdown
+- Endpoint `POST /api/items/{item_id}/quote` returning itemized billing:
+  - Base Daily Rent (`rate * days`)
+  - Platform Service Fee (`5% + $1.00`)
+  - Equipment Insurance (`8%`)
+  - Refundable Security Deposit Escrow
+  - Grand Total Due
+- Quote modal with formatted currency breakdown.
 
 ### Module 8: Rental Agreement Terms & Conditions (Mandatory Acknowledgment)
-- **Requirements**: Display legal terms and conditions of rental agreement to Renter. Renter must acknowledge reading and agree to them in order to proceed with transaction.
-- **Implementation**:
-  - Database model `RentalAgreement` storing: `item_id`, `renter_id`, `owner_id`, `start_date`, `end_date`, `daily_rate`, `base_rent`, `security_deposit`, `service_fee`, `insurance_fee`, `total_amount`, `agreed_at`, `status`.
-  - Endpoint `POST /api/rental-agreements`:
-    - Enforces 3 mandatory acknowledgment flags:
-      1. Safe operation & PPE compliance with manufacturer guidelines.
-      2. Security deposit return policy.
-      3. Acceptance of Master P2P Terms & Conditions.
-    - Generates unique agreement code (`SHR-AGR-XXXXX`) and timestamps execution.
-  - Modal `#agreement-modal` disables the proceed button until all 3 checkboxes are checked.
+- Database model `RentalAgreement` capturing contract snapshot.
+- Modal `#agreement-modal` with 5 legal clauses.
+- Enforces 3 mandatory checkboxes:
+  1. Safety compliance, PPE, and operational manual adherence.
+  2. Security deposit return policy.
+  3. Master P2P Terms & Conditions acceptance.
+- Action button remains locked until all 3 are checked.
 
-### Module 9: Payment Processing & Escrow Deposit Hold
-- **Requirements**: Process immediate rental charges, place refundable security deposit in platform escrow vault, auto-lock booked dates, and generate digital receipt with 4-digit Handover PIN.
-- **Implementation**:
-  - Database model `PaymentTransaction`: `agreement_id`, `renter_id`, `transaction_code` (`TXN-XXXXXXXX`), `payment_method`, `card_last4`, `amount_charged`, `escrow_deposit_held`, `total_paid`, `payment_status`, `handover_pin`, `created_at`.
-  - Endpoint `POST /api/checkout/pay`:
-    - Validates card details (includes sandbox test cards and 0000 decline simulation).
-    - Records immediate charge (rent + platform fee + insurance) and dedicated escrow deposit hold.
-    - Automatically marks dates in `item_availability` as `booked` to prevent double-booking.
-    - Transitions `RentalAgreement` status from `pending_payment` to `confirmed`.
-    - Generates cryptographically secure 4-digit Handover Verification PIN.
-  - Modals:
-    - `#checkout-modal`: Itemized financial breakdown, test card pre-fill (`4242 4242 4242 4242`), and encrypted card inputs.
-    - `#receipt-modal`: Digital confirmation receipt with prominent 4-Digit Handover Verification PIN banner and print option.
+### Module 9: Payment Processing & Escrow Hold Simulation
+- Database model `PaymentTransaction`.
+- Endpoint `POST /api/checkout/pay` processing simulated card transactions (with sandbox helper `4242...` and `0000` decline simulation).
+- Holds security deposit in escrow.
+- Locks calendar dates in `item_availability` to `booked`.
+- Generates a random 4-digit Handover Verification PIN.
+- Modal `#checkout-modal` and digital receipt modal `#receipt-modal`.
 
----
+### Module 10: In-Person Handover PIN Verification & Return Inspection Checklist
+- **Pickup Verification**: Owner clicks `Verify Handover`, enters the Renter's 4-digit PIN, and records initial condition notes. Status transitions to `active`.
+- **Return Inspection Checklist**: Owner inspects physical condition (`Like New`, `Good`, or `Damaged`), verifies all accessories/cables, and confirms cleanliness.
+- **Automated Escrow Refund**: Submitting the inspection checklist immediately releases the **100% Security Deposit Escrow** back to the Renter and marks status `completed`.
 
-## 5. Seeded Test Accounts
-
-For testing across devices, these accounts are pre-configured and verified in the database:
-
-| User ID | Username | Password | Full Name | Primary Role |
-|---|---|---|---|---|
-| **1** | `bobthebuilder` | `Password123` | Bob Builder | Renter / Owner |
-| **2** | `alicewalker` | `Password123` | Alice Walker | Owner / Renter |
-
-- Sample active listing: **DeWalt 20V Cordless Hammer Drill Kit (DCD996)** owned by Alice (ID 2), complete with photos, duration rules, and YouTube how-to video.
-
----
-
-## 6. How to Run & Verify on Any Machine
-
-```bash
-# 1. Clone or copy the project directory
-git clone https://github.com/rajbaronia/buildwithgemini-sharent.git
-cd buildwithgemini-sharent/sharent-app
-
-# 2. Activate Python virtual environment (or recreate one with requirements)
-source .venv/bin/activate
-pip install fastapi uvicorn sqlalchemy pydantic jinja2 python-multipart passlib pytest
-
-# 3. Start the FastAPI server
-uvicorn main:app --host 0.0.0.0 --port 8000
-
-# 4. In a separate terminal, run all 10 automated test suites
-pytest -v
-```
-
----
-
-## 7. Recommended Next Steps for Implementation
-
-When continuing development on this or another device, the recommended logical phases are:
-
-1. **Module 10: Item Handover & Return Inspection Checklist**
-   - **Pickup / Handover**: Owner inputs the Renter's 4-digit PIN to confirm the physical exchange and item baseline condition.
-   - **Return & Inspection**: Owner marks item returned in clean condition, which automatically triggers the **100% Security Deposit Escrow Refund** back to the Renter.
-2. **Module 11: Mutual Rating & Review System**
-   - Post-rental review prompt for both Owner and Renter (Item condition rating, communication rating, punctuality).
-3. **Module 12: Production Cloud Deployment (Cloud Run + PostgreSQL)**
-   - Transition SQLite to Cloud SQL PostgreSQL.
-   - Deploy containerized FastAPI application to Google Cloud Run with custom domain.
-
----
-
-## 10. Module 10: Item Handover PIN Verification & Return Inspection Checklist (Completed)
-- **Requirements**: Owner verifies Renter's 4-digit Handover PIN to release the item; Owner completes a multi-point return inspection checklist (condition, accessories, cleanliness); confirming satisfactory condition automatically triggers the **100% Security Deposit Escrow Refund** release to the Renter.
-- **Implementation**:
-  - `RentalHandoverInspection` model recording: `agreement_id`, `pickup_verified_at`, `pickup_notes`, `return_verified_at`, `condition_on_return` (`like_new`, `good`, `damaged`), `all_accessories_returned`, `cleaned_properly`, `deposit_refund_status`, `deposit_refunded_amount`, `inspection_notes`.
-  - Endpoints:
-    - `POST /api/rentals/verify-handover`: Validates owner authorization, checks 4-digit PIN against `payment_transactions.handover_pin`, transitions agreement to `active`.
-    - `POST /api/rentals/return-inspection`: Records return inspection checklist, triggers 100% escrow refund, and marks agreement `completed`.
-    - `GET /api/rentals/user/{user_id}`: Real-time rental feed filtered by role (Owner vs Renter).
-  - UI Modals & Sections:
-    - Dedicated **"My Rentals, Handovers & Returns"** section on dashboard.
-    - `#handover-verify-modal`: Owner enters Renter's 4-digit PIN.
-    - `#return-inspect-modal`: Return inspection checklist with 1-click escrow deposit release.
-  - Tested 100% via `test_handover_and_return.py`. All 11 test suites passing.
-
----
-
-## 11. Module 11: Mutual Rating & Review System (Next Module)
-- **Status**: Under active implementation.
-- **Objectives**: Enable Renters to review items and owners (item accuracy, condition, communication) and Owners to review renters (punctuality, item care), calculating average star ratings and displaying verified feedback across the marketplace.
-
----
-
-## 12. Module 11: Mutual Rating & Review System (Completed)
-- **Requirements**: Enable verified Renters and Owners to review and rate each other (1 to 5 stars) once a rental transaction has reached `completed` status; calculate real-time average star ratings, review counts, and display tag badges (e.g. `Clean & Like New`, `Great Communication`, `Punctual`).
-- **Implementation**:
-  - `RentalReview` model recording: `agreement_id`, `reviewer_id`, `reviewee_id`, `item_id`, `role` (`renter_to_owner` vs `owner_to_renter`), `rating`, `comment`, `tags`, and `created_at`.
-  - Endpoints:
-    - `POST /api/reviews`: Validates agreement is completed, verifies role authorization, enforces duplicate prevention, and saves review.
-    - `GET /api/items/{item_id}/reviews`: Calculates aggregate average star rating, total review count, and provides verified review feedback list.
-  - UI Modal & Enhancements:
-    - `#review-modal`: Interactive 5-star rating selector, 1-click compliment tag chips, and feedback text area.
-    - Rental Activity cards dynamically display **`Leave Review ★`** or `Reviewed ★` checkmark once completed.
-  - Tested 100% via `test_reviews.py`. All 12 test suites passing.
-
----
-
-## 13. Airbnb-Style Granular Multi-Attribute Rating System (Completed)
-- **Requirements**: Assign specific multi-criteria rating dimensions for the Item, Owner, and Renter in each rental transaction:
+### Module 11–13: Airbnb-Style Granular Multi-Attribute Rating System
+- Specific rating dimensions evaluating each party in the rental transaction:
   - **Item Criteria (Rated by Renter)**:
     1. *Accuracy* (Listing description, specs & photos match actual item)
     2. *Working Condition* (Functional, well maintained, and clean)
@@ -261,12 +240,58 @@ When continuing development on this or another device, the recommended logical p
     3. *Friendliness* (Respectful and polite conduct)
     4. *Takes Good Care of the Item* (Handled equipment with appropriate caution)
     5. *Returned the Item in Good Condition* (Clean, complete, all parts/accessories intact)
-- **Implementation**:
-  - `RentalReview` database model storing individual 1–5 integer scores for all 15 criteria and calculating overall score as the average.
-  - Endpoints:
-    - `POST /api/reviews`: Validates 1–5 range on all dimensions, stores attribute scores, and computes exact average rating.
-    - `GET /api/items/{item_id}/reviews`: Computes aggregate averages for all 5 Item criteria (`accuracy`, `condition`, `ease_of_use`, `instructions`, `value`) plus verified feedback list.
-  - UI Experience:
-    - `#review-modal`: Renders role-specific attribute dropdowns/selectors with real-time feedback.
-    - `#detail-modal`: Renders Airbnb-style horizontal criteria progress bars for all 5 item attributes alongside verified renter reviews!
-  - Tested 100% via `test_reviews.py`. All 12 test suites passing.
+- **UI Implementation**:
+  - Modal `#review-modal` dynamically displays role-specific criteria dropdowns with live rating labels and compliment tag chips.
+  - Item detail modal `#detail-modal` displays an **Airbnb-style criteria progress bar grid** with average score bars for all 5 Item dimensions alongside verified renter reviews!
+  - Duplicate review prevention (1 review per party per agreement).
+
+---
+
+## 5. Automated Testing Suite
+
+All 12 Pytest test suites are passing with 100% success rate:
+
+```bash
+cd /config/Desktop/BuildWithGemini/sharent-app
+.venv/bin/pytest -v
+```
+
+1. `test_reviews.py` — Airbnb-style multi-attribute rating criteria & calculation.
+2. `test_handover_and_return.py` — Pickup PIN verification, return checklist & escrow refund.
+3. `test_payment_checkout.py` — Payment processing, escrow deposit hold & auto-booking.
+4. `test_rental_agreement.py` — Terms agreement generation & mandatory checkbox enforcement.
+5. `test_quote_api.py` — Rental quote breakdown & fee calculation math.
+6. `test_item_activation_toggle.py` — Owner show/hide toggle for marketplace listings.
+7. `test_calendar_availability.py` — Calendar date selection & conflict validation.
+8. `test_item_listing_advanced.py` — Photo upload, YouTube embeds & manual URL links.
+9. `test_roles_and_items.py` — Role switching between Owner and Renter modes.
+10. `test_login.py` — 2FA login verification & credential checking.
+11. `test_registration.py` (2 tests) — User registration & dual-channel OTP validation.
+
+---
+
+## 6. How to Run Locally
+
+```bash
+cd /config/Desktop/BuildWithGemini/sharent-app
+# Start the FastAPI server
+.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+- **Landing & Registration**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- **Bob's Dashboard (Renter)**: [http://127.0.0.1:8000/dashboard/1](http://127.0.0.1:8000/dashboard/1)
+- **Alice's Dashboard (Owner)**: [http://127.0.0.1:8000/dashboard/2](http://127.0.0.1:8000/dashboard/2)
+- **Interactive Swagger API Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+---
+
+## 7. Recommended Next Steps
+
+1. **In-App Messaging & Real-Time Chat (Module 14)**:
+   - Direct messaging between Renter and Owner before and during the rental period.
+   - Coordinate exact pickup address and exchange questions about equipment usage.
+2. **Geo-Location & Map View (Module 15)**:
+   - Interactive map (Leaflet / Google Maps) showing equipment availability by neighborhood radius (e.g. within 2 miles, 5 miles, 10 miles).
+3. **Cloud Production Deployment (Module 16)**:
+   - Containerize via Dockerfile.
+   - Deploy to **Google Cloud Run** with a managed **Cloud SQL PostgreSQL** database.
