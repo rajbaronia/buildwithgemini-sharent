@@ -218,3 +218,9 @@ When continuing development on this or another device, the recommended logical p
     - `#handover-verify-modal`: Owner enters Renter's 4-digit PIN.
     - `#return-inspect-modal`: Return inspection checklist with 1-click escrow deposit release.
   - Tested 100% via `test_handover_and_return.py`. All 11 test suites passing.
+
+---
+
+## 11. Module 11: Mutual Rating & Review System (Next Module)
+- **Status**: Under active implementation.
+- **Objectives**: Enable Renters to review items and owners (item accuracy, condition, communication) and Owners to review renters (punctuality, item care), calculating average star ratings and displaying verified feedback across the marketplace.
