@@ -1,3 +1,4 @@
+import deposit_engine
 from geo_utils import resolve_coordinates, haversine_distance_miles
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -786,8 +787,13 @@ def get_rental_quote(item_id: int, payload: CalendarRangeCheckRequest, db: Sessi
     # Equipment Insurance Protection: 8% of base rent if required (min .00)
     insurance_fee = round(max(3.00, base_rent * 0.08), 2) if item.insurance_required else 0.0
 
-    # Refundable Security Deposit
-    security_deposit = round(item.security_deposit, 2)
+    # Owner Discretionary Security Deposit Evaluation (Module 22)
+    deposit_eval = deposit_engine.evaluate_renter_deposit_tier(item, payload.renter_id, db)
+    security_deposit = deposit_eval["security_deposit"]
+    original_security_deposit = deposit_eval["original_security_deposit"]
+    deposit_discount_pct = deposit_eval["deposit_discount_pct"]
+    deposit_tier_status = deposit_eval["tier_status"]
+    deposit_evaluation_reason = deposit_eval["evaluation_reason"]
 
     # Total Amount Due Now
     total_due_now = round(base_rent + service_fee_total + insurance_fee + security_deposit, 2)
@@ -802,6 +808,10 @@ def get_rental_quote(item_id: int, payload: CalendarRangeCheckRequest, db: Sessi
         daily_rate=item.base_rate_daily,
         base_rent=base_rent,
         security_deposit=security_deposit,
+        original_security_deposit=original_security_deposit,
+        deposit_discount_pct=deposit_discount_pct,
+        deposit_tier_status=deposit_tier_status,
+        deposit_evaluation_reason=deposit_evaluation_reason,
         insurance_fee=insurance_fee,
         insurance_required=item.insurance_required,
         service_fee_fixed=service_fee_fixed,
@@ -855,11 +865,17 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
     if blocked:
         raise HTTPException(status_code=400, detail=f"Selected date {blocked.date} is unavailable ({blocked.reason or blocked.status}).")
 
-    # 6. Calculate fee itemization
+    # 6. Calculate fee itemization with Owner Discretionary Deposit (Module 22)
     base_rent = round(total_days * item.base_rate_daily, 2)
     service_fee = round(1.00 + (base_rent * 0.05), 2)
     insurance_fee = round(max(3.00, base_rent * 0.08), 2) if item.insurance_required else 0.0
-    security_deposit = round(item.security_deposit, 2)
+    
+    deposit_eval = deposit_engine.evaluate_renter_deposit_tier(item, renter.id, db)
+    security_deposit = deposit_eval["security_deposit"]
+    original_security_deposit = deposit_eval["original_security_deposit"]
+    deposit_discount_pct = deposit_eval["deposit_discount_pct"]
+    deposit_evaluation_reason = deposit_eval["evaluation_reason"]
+
     total_amount = round(base_rent + service_fee + insurance_fee + security_deposit, 2)
 
     # 7. Create & Persist Agreement
@@ -873,6 +889,9 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
         daily_rate=item.base_rate_daily,
         base_rent=base_rent,
         security_deposit=security_deposit,
+        original_security_deposit=original_security_deposit,
+        deposit_discount_pct=deposit_discount_pct,
+        deposit_evaluation_reason=deposit_evaluation_reason,
         service_fee=service_fee,
         insurance_fee=insurance_fee,
         total_amount=total_amount,
@@ -912,6 +931,9 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
         daily_rate=agreement.daily_rate,
         base_rent=agreement.base_rent,
         security_deposit=agreement.security_deposit,
+        original_security_deposit=agreement.original_security_deposit,
+        deposit_discount_pct=agreement.deposit_discount_pct,
+        deposit_evaluation_reason=agreement.deposit_evaluation_reason,
         service_fee=agreement.service_fee,
         insurance_fee=agreement.insurance_fee,
         total_amount=agreement.total_amount,
@@ -1250,6 +1272,9 @@ def get_user_rentals(user_id: int, role: str = "renter", db: Session = Depends(g
             "total_days": agr.total_days,
             "total_amount": agr.total_amount,
             "security_deposit": agr.security_deposit,
+            "original_security_deposit": agr.original_security_deposit,
+            "deposit_discount_pct": agr.deposit_discount_pct,
+            "deposit_evaluation_reason": agr.deposit_evaluation_reason,
             "status": agr.status,
             "handover_pin": txn.handover_pin if txn else None,
             "deposit_refund_status": insp.deposit_refund_status if insp else None,

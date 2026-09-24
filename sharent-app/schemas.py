@@ -134,6 +134,7 @@ class DateBlockToggleRequest(BaseModel):
 class CalendarRangeCheckRequest(BaseModel):
     start_date: date_type
     end_date: date_type
+    renter_id: Optional[int] = None
 
 class CalendarRangeCheckResponse(BaseModel):
     is_available: bool
@@ -161,6 +162,10 @@ class RentalQuoteResponse(BaseModel):
     daily_rate: float
     base_rent: float
     security_deposit: float
+    original_security_deposit: float = 0.0
+    deposit_discount_pct: float = 0.0
+    deposit_tier_status: str = "standard_full"
+    deposit_evaluation_reason: str = ""
     insurance_fee: float
     insurance_required: bool
     service_fee_fixed: float
@@ -192,6 +197,9 @@ class RentalAgreementResponse(BaseModel):
     daily_rate: float
     base_rent: float
     security_deposit: float
+    original_security_deposit: Optional[float] = None
+    deposit_discount_pct: Optional[float] = 0.0
+    deposit_evaluation_reason: Optional[str] = None
     service_fee: float
     insurance_fee: float
     total_amount: float

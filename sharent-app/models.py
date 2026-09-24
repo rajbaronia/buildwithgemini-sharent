@@ -142,6 +142,9 @@ class RentalAgreement(Base):
     insurance_fee = Column(Float, default=0.0)
     total_amount = Column(Float, nullable=False)
     terms_version = Column(String, default='v1.0')
+    original_security_deposit = Column(Float, nullable=True)
+    deposit_discount_pct = Column(Float, default=0.0)
+    deposit_evaluation_reason = Column(String, nullable=True)
     agreed_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default='pending_payment')  # pending_payment, active, completed, cancelled
 

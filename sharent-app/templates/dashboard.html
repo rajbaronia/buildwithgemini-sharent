@@ -1665,16 +1665,19 @@
           <div id="quote-insurance-fee" class="font-black text-slate-800"></div>
         </div>
 
-        <!-- 4. Security Deposit -->
-        <div class="flex items-center justify-between text-sm py-1 border-b border-slate-100 bg-amber-50/60 -mx-2 px-2 rounded-xl">
-          <div>
-            <div class="font-semibold text-amber-900 flex items-center">
-              <span>Refundable Escrow Security Deposit</span>
-              <i class="fa-solid fa-shield-halved ml-1.5 text-amber-600 text-xs"></i>
+        <!-- 4. Security Deposit (Owner Discretionary - Module 22) -->
+        <div class="py-1.5 border-b border-slate-100 bg-amber-50/60 -mx-2 px-3 rounded-xl">
+          <div class="flex items-center justify-between text-sm">
+            <div>
+              <div class="font-semibold text-amber-900 flex items-center">
+                <span>Refundable Escrow Security Deposit</span>
+                <i class="fa-solid fa-shield-halved ml-1.5 text-amber-600 text-xs"></i>
+              </div>
+              <div class="text-[11px] text-amber-700">Owner discretion applies: waived or discounted for trusted &amp; highly rated renters</div>
             </div>
-            <div class="text-[11px] text-amber-700">100% refunded when item is returned in agreed condition</div>
+            <div id="quote-deposit" class="font-black text-amber-900"></div>
           </div>
-          <div id="quote-deposit" class="font-black text-amber-900"></div>
+          <div id="quote-deposit-eval-reason" class="mt-1"></div>
         </div>
       </div>
 
@@ -2732,7 +2735,8 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             start_date: selectedStartDate,
-            end_date: selectedEndDate
+            end_date: selectedEndDate,
+            renter_id: currentUserId
           })
         });
         var data = await res.json();
@@ -2766,7 +2770,18 @@
         insuranceRow.classList.add('hidden');
       }
 
-      document.getElementById('quote-deposit').innerText = '$' + data.security_deposit.toFixed(2);
+      var depEl = document.getElementById('quote-deposit');
+      var depReasonEl = document.getElementById('quote-deposit-eval-reason');
+      if (data.deposit_discount_pct === 100.0) {
+        depEl.innerHTML = '<span class="line-through text-slate-400 text-xs mr-1.5">$' + data.original_security_deposit.toFixed(2) + '</span><span class="text-emerald-700 font-black">$0.00 (Waived)</span>';
+      } else if (data.deposit_discount_pct > 0) {
+        depEl.innerHTML = '<span class="line-through text-slate-400 text-xs mr-1.5">$' + data.original_security_deposit.toFixed(2) + '</span><span class="text-emerald-700 font-black">$' + data.security_deposit.toFixed(2) + ' (-' + data.deposit_discount_pct + '%)</span>';
+      } else {
+        depEl.innerText = '$' + data.security_deposit.toFixed(2);
+      }
+      if (depReasonEl) {
+        depReasonEl.innerHTML = (data.deposit_evaluation_reason ? '<div class="mt-1 flex items-center space-x-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-100/70 border border-emerald-200/80 px-2 py-0.5 rounded-lg"><i class="fa-solid fa-award text-amber-500"></i><span>' + data.deposit_evaluation_reason + '</span></div>' : '');
+      }
       document.getElementById('quote-total-due').innerText = '$' + data.total_due_now.toFixed(2);
 
       // Hide detail modal and open quote modal

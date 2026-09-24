@@ -507,6 +507,29 @@ cd /config/Desktop/BuildWithGemini/sharent-app
    - Created comprehensive test suite in [`test_item_location_and_vicinity_search.py`](file:///config/Desktop/BuildWithGemini/sharent-app/test_item_location_and_vicinity_search.py).
    - **All 20 test suites passing 100%** (`20 passed in 29.20s`).
 
+
+---
+
+## 22. Module 22: Owner Discretionary Security Deposit (Waiver & Tiered Reductions) (Completed)
+
+### 22.1 Core Architecture & Objectives
+1. **Owner Discretion & Risk Safeguards**:
+   - The requirement and magnitude of Security Deposits are placed at the Owner's discretion based on renter trust and community reputation.
+   - **New / Unreviewed Users**: 100% standard full deposit required to safeguard the Owner's equipment against first-time risk.
+   - **Highly Rated Community Renters**: 50% deposit discount applied automatically for renters with positive feedback ($\ge 4.5\star$ across community reviews).
+   - **Trusted Repeat Renters**: 100% deposit completely waived ($0.00 deposit) for renters who have had prior satisfactory completed transactions with this Owner without disputes.
+2. **Deposit Evaluation Engine**:
+   - Built [`deposit_engine.py`](file:///config/Desktop/BuildWithGemini/sharent-app/deposit_engine.py) implementing `evaluate_renter_deposit_tier(item, renter_id, db)`.
+   - Returns evaluated `security_deposit`, `original_security_deposit`, `deposit_discount_pct`, `tier_status`, and `evaluation_reason`.
+3. **Transparent Itemized Quote & Rental Agreement Processing**:
+   - Updated `GET /api/items/{item_id}/quote` and `POST /api/rental-agreements` to incorporate discretionary deposit tiers.
+   - Added `original_security_deposit`, `deposit_discount_pct`, and `deposit_evaluation_reason` to the `RentalAgreement` database model.
+   - In the frontend quote modal, renters see a strike-through of the original deposit and a highlighted discount badge (e.g. `🎉 50% Deposit Reduction Applied! Highly rated community renter (5.0★)` or `🛡️ Security Deposit 100% Waived! Trusted Renter with 1 prior satisfactory rental(s) with this Owner`).
+   - In escrow checkout, only the evaluated deposit is held.
+4. **Automated Verification**:
+   - Created test suite in [`test_owner_discretionary_deposit.py`](file:///config/Desktop/BuildWithGemini/sharent-app/test_owner_discretionary_deposit.py) covering newly registered users (full deposit), highly rated community users (50% reduction), and repeat trusted users (100% waiver).
+   - **All 21 test suites passing 100%** (`21 passed in 31.03s`).
+
 ## 7. Recommended Next Steps
 
 1. **In-App Messaging & Real-Time Chat (Module 14)**:
