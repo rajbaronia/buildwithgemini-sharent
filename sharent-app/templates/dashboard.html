@@ -454,15 +454,15 @@
   
   <!-- ==================== MUTUAL RATING & REVIEW MODAL ==================== -->
   <div id="review-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
       <div class="flex items-start justify-between pb-3 border-b border-slate-100">
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg">
             <i class="fa-solid fa-star"></i>
           </div>
           <div>
-            <h3 class="text-base font-black text-slate-900">Leave a Review</h3>
-            <p class="text-xs text-slate-500">Rate your experience &amp; share feedback</p>
+            <h3 class="text-base font-black text-slate-900">Review &amp; Rating</h3>
+            <p class="text-xs text-slate-500">Airbnb-style multi-criteria evaluation</p>
           </div>
         </div>
         <button type="button" onclick="closeReviewModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
@@ -479,23 +479,209 @@
           <div class="flex justify-between"><span class="text-slate-400">Item:</span> <strong id="rev-item-title" class="text-slate-800"></strong></div>
         </div>
 
-        <!-- Interactive 5-Star Rating -->
-        <div class="text-center py-2">
-          <label class="block text-xs font-bold text-slate-700 mb-2">Overall Star Rating</label>
-          <div id="star-rating-container" class="inline-flex space-x-2 text-2xl text-amber-400 cursor-pointer">
-            <i class="fa-solid fa-star" onclick="setReviewRating(1)"></i>
-            <i class="fa-solid fa-star" onclick="setReviewRating(2)"></i>
-            <i class="fa-solid fa-star" onclick="setReviewRating(3)"></i>
-            <i class="fa-solid fa-star" onclick="setReviewRating(4)"></i>
-            <i class="fa-solid fa-star" onclick="setReviewRating(5)"></i>
+        <!-- ================= SECTION A: RENTER REVIEWING ITEM & OWNER ================= -->
+        <div id="renter-review-fields" class="space-y-4">
+          <!-- 1. Item Rating Criteria -->
+          <div class="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/60 space-y-2.5">
+            <div class="flex items-center space-x-2 text-xs font-black text-amber-900">
+              <i class="fa-solid fa-wrench"></i>
+              <span>Item Evaluation Criteria</span>
+            </div>
+            
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">1. Accuracy (Description &amp; Photos match):</span>
+                <select id="rate-item-accuracy" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-amber-600 focus:outline-none">
+                  <option value="5">5 ★ Exceptional</option>
+                  <option value="4">4 ★ Good</option>
+                  <option value="3">3 ★ Fair</option>
+                  <option value="2">2 ★ Minor Discrepancy</option>
+                  <option value="1">1 ★ Misleading</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">2. Working Condition (Functional &amp; Clean):</span>
+                <select id="rate-item-condition" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-amber-600 focus:outline-none">
+                  <option value="5">5 ★ Like New / Mint</option>
+                  <option value="4">4 ★ Normal Minor Wear</option>
+                  <option value="3">3 ★ Acceptable</option>
+                  <option value="2">2 ★ Noticeable Wear</option>
+                  <option value="1">1 ★ Poor / Malfunctioning</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">3. Ease of Use (Intuitive to operate):</span>
+                <select id="rate-item-ease" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-amber-600 focus:outline-none">
+                  <option value="5">5 ★ Effortless</option>
+                  <option value="4">4 ★ Easy</option>
+                  <option value="3">3 ★ Moderate</option>
+                  <option value="2">2 ★ Complicated</option>
+                  <option value="1">1 ★ Difficult</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">4. Operating Instructions (Manual / Video):</span>
+                <select id="rate-item-instructions" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-amber-600 focus:outline-none">
+                  <option value="5">5 ★ Crystal Clear</option>
+                  <option value="4">4 ★ Very Helpful</option>
+                  <option value="3">3 ★ Basic</option>
+                  <option value="2">2 ★ Hard to Follow</option>
+                  <option value="1">1 ★ Missing / Unclear</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">5. Value for Money (Fair daily rate):</span>
+                <select id="rate-item-value" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-amber-600 focus:outline-none">
+                  <option value="5">5 ★ Unbeatable Value</option>
+                  <option value="4">4 ★ Great Deal</option>
+                  <option value="3">3 ★ Fair</option>
+                  <option value="2">2 ★ Overpriced</option>
+                  <option value="1">1 ★ Poor Value</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <input type="hidden" id="rev-rating-value" value="5">
-          <p id="rev-rating-label" class="text-xs font-bold text-amber-600 mt-1">5 Stars – Outstanding Experience</p>
+
+          <!-- 2. Owner Rating Criteria -->
+          <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-200/60 space-y-2.5">
+            <div class="flex items-center space-x-2 text-xs font-black text-indigo-900">
+              <i class="fa-solid fa-user-shield"></i>
+              <span>Owner Evaluation Criteria</span>
+            </div>
+
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">1. Response Time:</span>
+                <select id="rate-owner-response" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 focus:outline-none">
+                  <option value="5">5 ★ Immediate (< 15 mins)</option>
+                  <option value="4">4 ★ Fast (< 1 hr)</option>
+                  <option value="3">3 ★ Within a few hours</option>
+                  <option value="2">2 ★ Slow (> 6 hrs)</option>
+                  <option value="1">1 ★ Unresponsive</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">2. Clear Communications:</span>
+                <select id="rate-owner-comm" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 focus:outline-none">
+                  <option value="5">5 ★ Thorough &amp; Clear</option>
+                  <option value="4">4 ★ Good</option>
+                  <option value="3">3 ★ Adequate</option>
+                  <option value="2">2 ★ Vague</option>
+                  <option value="1">1 ★ Confusing</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">3. Friendliness:</span>
+                <select id="rate-owner-friendly" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 focus:outline-none">
+                  <option value="5">5 ★ Very Warm &amp; Helpful</option>
+                  <option value="4">4 ★ Pleasant</option>
+                  <option value="3">3 ★ Neutral</option>
+                  <option value="2">2 ★ Curt</option>
+                  <option value="1">1 ★ Unfriendly</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">4. Ease of Pick-up Process:</span>
+                <select id="rate-owner-pickup" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 focus:outline-none">
+                  <option value="5">5 ★ Seamless Handover</option>
+                  <option value="4">4 ★ Smooth</option>
+                  <option value="3">3 ★ Acceptable</option>
+                  <option value="2">2 ★ Slight Inconvenience</option>
+                  <option value="1">1 ★ Disorganized</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">5. Ease of Return Process:</span>
+                <select id="rate-owner-return" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 focus:outline-none">
+                  <option value="5">5 ★ Instant Escrow Release</option>
+                  <option value="4">4 ★ Quick &amp; Fair</option>
+                  <option value="3">3 ★ Normal</option>
+                  <option value="2">2 ★ Delayed</option>
+                  <option value="1">1 ★ Difficult</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= SECTION B: OWNER REVIEWING RENTER ================= -->
+        <div id="owner-review-fields" class="space-y-4 hidden">
+          <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/60 space-y-2.5">
+            <div class="flex items-center space-x-2 text-xs font-black text-emerald-900">
+              <i class="fa-solid fa-user-check"></i>
+              <span>Renter Evaluation Criteria</span>
+            </div>
+
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">1. Communication:</span>
+                <select id="rate-renter-comm" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700 focus:outline-none">
+                  <option value="5">5 ★ Prompt &amp; Proactive</option>
+                  <option value="4">4 ★ Good</option>
+                  <option value="3">3 ★ Responsive</option>
+                  <option value="2">2 ★ Slow</option>
+                  <option value="1">1 ★ Unresponsive</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">2. Responsible:</span>
+                <select id="rate-renter-resp" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700 focus:outline-none">
+                  <option value="5">5 ★ 100% Punctual &amp; Reliable</option>
+                  <option value="4">4 ★ Reliable</option>
+                  <option value="3">3 ★ Acceptable</option>
+                  <option value="2">2 ★ Minor Delays</option>
+                  <option value="1">1 ★ Irresponsible</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">3. Friendliness:</span>
+                <select id="rate-renter-friendly" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700 focus:outline-none">
+                  <option value="5">5 ★ Very Polite &amp; Respectful</option>
+                  <option value="4">4 ★ Courteous</option>
+                  <option value="3">3 ★ Neutral</option>
+                  <option value="2">2 ★ Impatient</option>
+                  <option value="1">1 ★ Rude</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">4. Takes Good Care of the Item:</span>
+                <select id="rate-renter-care" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700 focus:outline-none">
+                  <option value="5">5 ★ Handled with Utmost Caution</option>
+                  <option value="4">4 ★ Well Cared For</option>
+                  <option value="3">3 ★ Normal Wear</option>
+                  <option value="2">2 ★ Rough Handling</option>
+                  <option value="1">1 ★ Negligent</option>
+                </select>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-700 font-semibold">5. Returned in Good Condition:</span>
+                <select id="rate-renter-return" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-emerald-700 focus:outline-none">
+                  <option value="5">5 ★ Spotless with All Parts</option>
+                  <option value="4">4 ★ Clean &amp; Complete</option>
+                  <option value="3">3 ★ Satisfactory</option>
+                  <option value="2">2 ★ Needed Cleaning</option>
+                  <option value="1">1 ★ Damaged / Missing Items</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Quick Compliment Tags -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5">Quick Compliments (Select all that apply)</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Quick Compliments</label>
           <div class="flex flex-wrap gap-1.5" id="rev-tags-container">
             <button type="button" onclick="toggleReviewTag(this)" class="rev-tag px-2.5 py-1 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer">Clean &amp; Like New</button>
             <button type="button" onclick="toggleReviewTag(this)" class="rev-tag px-2.5 py-1 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer">Smooth Handover</button>
@@ -1197,6 +1383,89 @@
 
       </div>
 
+      
+        <!-- ================= AIRBNB-STYLE REVIEWS & RATING BREAKDOWN ================= -->
+        <div class="border-t border-slate-100 pt-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-base font-black text-slate-900 flex items-center">
+                <i class="fa-solid fa-star text-amber-400 mr-1.5 text-sm"></i>
+                <span id="detail-aggregate-rating">5.0</span>
+              </span>
+              <span class="text-slate-300">&bull;</span>
+              <span id="detail-review-count" class="text-xs font-bold text-slate-600">0 reviews</span>
+            </div>
+            <span class="text-[11px] font-semibold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full border border-brand-200">
+              <i class="fa-solid fa-shield-halved mr-1"></i> 100% Verified Rentals
+            </span>
+          </div>
+
+          <!-- 5 Criteria Progress Bars Grid -->
+          <div id="detail-criteria-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs">
+            <!-- 1. Accuracy -->
+            <div>
+              <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
+                <span>Accuracy</span>
+                <span id="score-accuracy">5.0</span>
+              </div>
+              <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-accuracy" class="bg-amber-400 h-full rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <!-- 2. Working Condition -->
+            <div>
+              <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
+                <span>Working Condition</span>
+                <span id="score-condition">5.0</span>
+              </div>
+              <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-condition" class="bg-amber-400 h-full rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <!-- 3. Ease of Use -->
+            <div>
+              <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
+                <span>Ease of Use</span>
+                <span id="score-ease">5.0</span>
+              </div>
+              <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-ease" class="bg-amber-400 h-full rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <!-- 4. Operating Instructions -->
+            <div>
+              <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
+                <span>Operating Instructions</span>
+                <span id="score-instructions">5.0</span>
+              </div>
+              <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-instructions" class="bg-amber-400 h-full rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <!-- 5. Value for Money -->
+            <div class="sm:col-span-2">
+              <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-1">
+                <span>Value for Money</span>
+                <span id="score-value">5.0</span>
+              </div>
+              <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-value" class="bg-amber-400 h-full rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Verified Reviews Comments Stream -->
+          <div id="detail-reviews-list" class="mt-4 space-y-3 max-h-48 overflow-y-auto pr-1">
+            <div class="text-center py-4 text-slate-400 text-xs">
+              <i class="fa-solid fa-spinner fa-spin mr-1"></i> Loading reviews...
+            </div>
+          </div>
+        </div>
+
       <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
         <button type="button" onclick="closeDetailModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer">
           <i class="fa-solid fa-arrow-left mr-1"></i> Close
@@ -1560,7 +1829,61 @@
           iframe.src = '';
         }
 
-        document.getElementById('detail-modal').classList.remove('hidden');
+        
+      // Fetch and display Airbnb-style review breakdown
+      fetch('/api/items/' + item.id + '/reviews')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          document.getElementById('detail-aggregate-rating').innerText = data.average_rating.toFixed(1);
+          document.getElementById('detail-review-count').innerText = data.total_reviews + (data.total_reviews === 1 ? ' review' : ' reviews');
+
+          var bd = data.criteria_breakdown || {accuracy: 5, condition: 5, ease_of_use: 5, instructions: 5, value: 5};
+          
+          document.getElementById('score-accuracy').innerText = bd.accuracy.toFixed(1);
+          document.getElementById('bar-accuracy').style.width = ((bd.accuracy / 5) * 100) + '%';
+
+          document.getElementById('score-condition').innerText = bd.condition.toFixed(1);
+          document.getElementById('bar-condition').style.width = ((bd.condition / 5) * 100) + '%';
+
+          document.getElementById('score-ease').innerText = bd.ease_of_use.toFixed(1);
+          document.getElementById('bar-ease').style.width = ((bd.ease_of_use / 5) * 100) + '%';
+
+          document.getElementById('score-instructions').innerText = bd.instructions.toFixed(1);
+          document.getElementById('bar-instructions').style.width = ((bd.instructions / 5) * 100) + '%';
+
+          document.getElementById('score-value').innerText = bd.value.toFixed(1);
+          document.getElementById('bar-value').style.width = ((bd.value / 5) * 100) + '%';
+
+          var revList = document.getElementById('detail-reviews-list');
+          if (!data.reviews || data.reviews.length === 0) {
+            revList.innerHTML = '<div class="text-center py-3 text-slate-400 text-xs italic">No reviews yet for this equipment. Be the first to rent and review!</div>';
+          } else {
+            var out = '';
+            data.reviews.forEach(function(r) {
+              var tagsHtml = '';
+              if (r.tags && r.tags.length > 0) {
+                tagsHtml = '<div class="flex flex-wrap gap-1 mt-1.5">' + r.tags.map(function(t) {
+                  return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">' + t + '</span>';
+                }).join('') + '</div>';
+              }
+
+              out += '<div class="p-3 rounded-xl bg-white border border-slate-200 text-xs shadow-sm">';
+              out += '  <div class="flex items-center justify-between mb-1">';
+              out += '    <strong class="text-slate-800">' + r.reviewer_name + '</strong>';
+              out += '    <span class="text-amber-500 font-bold"><i class="fa-solid fa-star mr-1"></i>' + r.rating.toFixed(1) + '</span>';
+              out += '  </div>';
+              out += '  <p class="text-slate-600 text-[11px] leading-relaxed">' + r.comment + '</p>';
+              out += tagsHtml;
+              out += '</div>';
+            });
+            revList.innerHTML = out;
+          }
+        })
+        .catch(function(e) {
+          console.error('Failed to load item reviews', e);
+        });
+
+      document.getElementById('detail-modal').classList.remove('hidden');
         await loadItemCalendar(item);
       } catch (err) {
         alert(err.message);
@@ -2369,7 +2692,16 @@
       document.getElementById('rev-target-name').innerText = targetName;
       document.getElementById('rev-item-title').innerText = itemTitle;
       document.getElementById('rev-comment').value = '';
-      setReviewRating(5);
+      
+      // Toggle role-specific criteria views
+      if (currentRole === 'owner') {
+        document.getElementById('renter-review-fields').classList.add('hidden');
+        document.getElementById('owner-review-fields').classList.remove('hidden');
+      } else {
+        document.getElementById('renter-review-fields').classList.remove('hidden');
+        document.getElementById('owner-review-fields').classList.add('hidden');
+      }
+
       document.querySelectorAll('.rev-tag').forEach(function(b) {
         b.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
         b.classList.add('border-slate-200', 'text-slate-600');
@@ -2384,7 +2716,6 @@
 
     async function submitRentalReview() {
       var agrId = parseInt(document.getElementById('rev-agreement-id').value);
-      var rating = parseInt(document.getElementById('rev-rating-value').value);
       var comment = document.getElementById('rev-comment').value.trim();
       var btn = document.getElementById('btn-submit-review');
       var errBox = document.getElementById('rev-error-box');
@@ -2394,6 +2725,33 @@
         selectedTags.push(b.innerText.trim());
       });
 
+      var payload = {
+        agreement_id: agrId,
+        reviewer_id: currentUserId,
+        comment: comment,
+        tags: selectedTags
+      };
+
+      if (currentRole === 'owner') {
+        payload.renter_communication = parseInt(document.getElementById('rate-renter-comm').value);
+        payload.renter_responsibility = parseInt(document.getElementById('rate-renter-resp').value);
+        payload.renter_friendliness = parseInt(document.getElementById('rate-renter-friendly').value);
+        payload.renter_care_of_item = parseInt(document.getElementById('rate-renter-care').value);
+        payload.renter_return_condition = parseInt(document.getElementById('rate-renter-return').value);
+      } else {
+        payload.item_accuracy = parseInt(document.getElementById('rate-item-accuracy').value);
+        payload.item_condition = parseInt(document.getElementById('rate-item-condition').value);
+        payload.item_ease_of_use = parseInt(document.getElementById('rate-item-ease').value);
+        payload.item_instructions = parseInt(document.getElementById('rate-item-instructions').value);
+        payload.item_value = parseInt(document.getElementById('rate-item-value').value);
+
+        payload.owner_response_time = parseInt(document.getElementById('rate-owner-response').value);
+        payload.owner_communication = parseInt(document.getElementById('rate-owner-comm').value);
+        payload.owner_friendliness = parseInt(document.getElementById('rate-owner-friendly').value);
+        payload.owner_pickup_ease = parseInt(document.getElementById('rate-owner-pickup').value);
+        payload.owner_return_ease = parseInt(document.getElementById('rate-owner-return').value);
+      }
+
       try {
         btn.disabled = true;
         btn.innerText = 'Submitting Review...';
@@ -2402,19 +2760,13 @@
         var res = await fetch('/api/reviews', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            agreement_id: agrId,
-            reviewer_id: currentUserId,
-            rating: rating,
-            comment: comment,
-            tags: selectedTags
-          })
+          body: JSON.stringify(payload)
         });
 
         var data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Review submission failed');
 
-        alert('Thank you! Your verified review has been published.');
+        alert('Thank you! Your verified review (' + data.rating.toFixed(1) + ' ★) has been published.');
         closeReviewModal();
         loadUserRentals();
       } catch (err) {

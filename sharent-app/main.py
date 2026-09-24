@@ -44,6 +44,7 @@ from schemas import (
     CreateReviewRequest,
     ReviewResponse,
     ItemReviewSummaryResponse,
+    ItemCriteriaBreakdown,
 )
 
 app = FastAPI(title="SHARENT Marketplace")
@@ -906,26 +907,87 @@ def submit_rental_review(payload: CreateReviewRequest, db: Session = Depends(get
     if existing:
         raise HTTPException(status_code=400, detail="You have already submitted a review for this rental.")
 
-    # 4. Validate Rating
-    if not (1 <= payload.rating <= 5):
-        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5 stars.")
     if not payload.comment.strip():
         raise HTTPException(status_code=400, detail="Please provide a comment sharing your feedback.")
 
-    tags_str = ",".join(payload.tags) if payload.tags else ""
+    # 4. Compute overall rating from specific criteria
+    if role == "renter_to_owner":
+        item_scores = [
+            payload.item_accuracy or 5,
+            payload.item_condition or 5,
+            payload.item_ease_of_use or 5,
+            payload.item_instructions or 5,
+            payload.item_value or 5
+        ]
+        owner_scores = [
+            payload.owner_response_time or 5,
+            payload.owner_communication or 5,
+            payload.owner_friendliness or 5,
+            payload.owner_pickup_ease or 5,
+            payload.owner_return_ease or 5
+        ]
+        for s in item_scores + owner_scores:
+            if not (1 <= s <= 5):
+                raise HTTPException(status_code=400, detail="All rating criteria scores must be between 1 and 5 stars.")
+        
+        overall = round(sum(item_scores + owner_scores) / len(item_scores + owner_scores), 1)
 
-    # 5. Save Review
-    review = RentalReview(
-        agreement_id=agreement.id,
-        reviewer_id=payload.reviewer_id,
-        reviewee_id=reviewee_id,
-        item_id=agreement.item_id,
-        role=role,
-        rating=payload.rating,
-        comment=payload.comment.strip(),
-        tags=tags_str,
-        created_at=datetime.utcnow()
-    )
+        review = RentalReview(
+            agreement_id=agreement.id,
+            reviewer_id=payload.reviewer_id,
+            reviewee_id=reviewee_id,
+            item_id=agreement.item_id,
+            role=role,
+            rating=overall,
+            comment=payload.comment.strip(),
+            tags=",".join(payload.tags) if payload.tags else "",
+            created_at=datetime.utcnow(),
+            # Item criteria
+            item_accuracy=payload.item_accuracy or 5,
+            item_condition=payload.item_condition or 5,
+            item_ease_of_use=payload.item_ease_of_use or 5,
+            item_instructions=payload.item_instructions or 5,
+            item_value=payload.item_value or 5,
+            # Owner criteria
+            owner_response_time=payload.owner_response_time or 5,
+            owner_communication=payload.owner_communication or 5,
+            owner_friendliness=payload.owner_friendliness or 5,
+            owner_pickup_ease=payload.owner_pickup_ease or 5,
+            owner_return_ease=payload.owner_return_ease or 5
+        )
+    else:
+        # Owner rating Renter
+        renter_scores = [
+            payload.renter_communication or 5,
+            payload.renter_responsibility or 5,
+            payload.renter_friendliness or 5,
+            payload.renter_care_of_item or 5,
+            payload.renter_return_condition or 5
+        ]
+        for s in renter_scores:
+            if not (1 <= s <= 5):
+                raise HTTPException(status_code=400, detail="All rating criteria scores must be between 1 and 5 stars.")
+
+        overall = round(sum(renter_scores) / len(renter_scores), 1)
+
+        review = RentalReview(
+            agreement_id=agreement.id,
+            reviewer_id=payload.reviewer_id,
+            reviewee_id=reviewee_id,
+            item_id=agreement.item_id,
+            role=role,
+            rating=overall,
+            comment=payload.comment.strip(),
+            tags=",".join(payload.tags) if payload.tags else "",
+            created_at=datetime.utcnow(),
+            # Renter criteria
+            renter_communication=payload.renter_communication or 5,
+            renter_responsibility=payload.renter_responsibility or 5,
+            renter_friendliness=payload.renter_friendliness or 5,
+            renter_care_of_item=payload.renter_care_of_item or 5,
+            renter_return_condition=payload.renter_return_condition or 5
+        )
+
     db.add(review)
     db.commit()
     db.refresh(review)
@@ -942,22 +1004,48 @@ def submit_rental_review(payload: CreateReviewRequest, db: Session = Depends(get
         rating=review.rating,
         comment=review.comment,
         tags=review.tags.split(",") if review.tags else [],
-        created_at=review.created_at
+        created_at=review.created_at,
+        item_accuracy=review.item_accuracy,
+        item_condition=review.item_condition,
+        item_ease_of_use=review.item_ease_of_use,
+        item_instructions=review.item_instructions,
+        item_value=review.item_value,
+        owner_response_time=review.owner_response_time,
+        owner_communication=review.owner_communication,
+        owner_friendliness=review.owner_friendliness,
+        owner_pickup_ease=review.owner_pickup_ease,
+        owner_return_ease=review.owner_return_ease,
+        renter_communication=review.renter_communication,
+        renter_responsibility=review.renter_responsibility,
+        renter_friendliness=review.renter_friendliness,
+        renter_care_of_item=review.renter_care_of_item,
+        renter_return_condition=review.renter_return_condition
     )
 
 
 @app.get("/api/items/{item_id}/reviews", response_model=ItemReviewSummaryResponse)
 def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
-    # Fetch reviews of the item made by renters
     reviews = db.query(RentalReview).filter(
         RentalReview.item_id == item_id,
         RentalReview.role == "renter_to_owner"
     ).order_by(RentalReview.created_at.desc()).all()
 
     rev_list = []
-    total_rating = 0
+    total_rating = 0.0
+    acc_sum = 0.0
+    cond_sum = 0.0
+    ease_sum = 0.0
+    inst_sum = 0.0
+    val_sum = 0.0
+
     for r in reviews:
-        total_rating += r.rating
+        total_rating += (r.rating or 5.0)
+        acc_sum += (r.item_accuracy or 5)
+        cond_sum += (r.item_condition or 5)
+        ease_sum += (r.item_ease_of_use or 5)
+        inst_sum += (r.item_instructions or 5)
+        val_sum += (r.item_value or 5)
+
         rev_list.append(ReviewResponse(
             id=r.id,
             agreement_id=r.agreement_id,
@@ -967,14 +1055,33 @@ def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
             rating=r.rating,
             comment=r.comment,
             tags=r.tags.split(",") if r.tags else [],
-            created_at=r.created_at
+            created_at=r.created_at,
+            item_accuracy=r.item_accuracy,
+            item_condition=r.item_condition,
+            item_ease_of_use=r.item_ease_of_use,
+            item_instructions=r.item_instructions,
+            item_value=r.item_value,
+            owner_response_time=r.owner_response_time,
+            owner_communication=r.owner_communication,
+            owner_friendliness=r.owner_friendliness,
+            owner_pickup_ease=r.owner_pickup_ease,
+            owner_return_ease=r.owner_return_ease
         ))
 
-    avg = round(total_rating / len(reviews), 1) if reviews else 5.0
+    n = len(reviews)
+    avg_total = round(total_rating / n, 1) if n > 0 else 5.0
+    breakdown = {
+        "accuracy": round(acc_sum / n, 1) if n > 0 else 5.0,
+        "condition": round(cond_sum / n, 1) if n > 0 else 5.0,
+        "ease_of_use": round(ease_sum / n, 1) if n > 0 else 5.0,
+        "instructions": round(inst_sum / n, 1) if n > 0 else 5.0,
+        "value": round(val_sum / n, 1) if n > 0 else 5.0,
+    }
 
     return ItemReviewSummaryResponse(
         item_id=item_id,
-        average_rating=avg,
-        total_reviews=len(reviews),
+        average_rating=avg_total,
+        total_reviews=n,
+        criteria_breakdown=breakdown,
         reviews=rev_list
     )

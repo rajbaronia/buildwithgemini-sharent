@@ -238,3 +238,35 @@ When continuing development on this or another device, the recommended logical p
     - `#review-modal`: Interactive 5-star rating selector, 1-click compliment tag chips, and feedback text area.
     - Rental Activity cards dynamically display **`Leave Review ★`** or `Reviewed ★` checkmark once completed.
   - Tested 100% via `test_reviews.py`. All 12 test suites passing.
+
+---
+
+## 13. Airbnb-Style Granular Multi-Attribute Rating System (Completed)
+- **Requirements**: Assign specific multi-criteria rating dimensions for the Item, Owner, and Renter in each rental transaction:
+  - **Item Criteria (Rated by Renter)**:
+    1. *Accuracy* (Listing description, specs & photos match actual item)
+    2. *Working Condition* (Functional, well maintained, and clean)
+    3. *Ease of Use* (Intuitive to operate and configure)
+    4. *Operating Instructions* (Provided manuals, guides, or video links)
+    5. *Value for Money* (Fair daily rental rate for the utility received)
+  - **Owner Criteria (Rated by Renter)**:
+    1. *Response Time* (Promptness in answering inquiries)
+    2. *Clear Communications* (Clarity of pickup and coordination instructions)
+    3. *Friendliness* (Professionalism, courtesy, and warmth)
+    4. *Ease of Pick-up Process* (Smoothness of physical handover)
+    5. *Ease of Return Process* (Simplicity and speed of deposit release)
+  - **Renter Criteria (Rated by Owner)**:
+    1. *Communication* (Promptness, responsiveness, and clarity)
+    2. *Responsible* (Punctuality, reliability, agreement adherence)
+    3. *Friendliness* (Respectful and polite conduct)
+    4. *Takes Good Care of the Item* (Handled equipment with appropriate caution)
+    5. *Returned the Item in Good Condition* (Clean, complete, all parts/accessories intact)
+- **Implementation**:
+  - `RentalReview` database model storing individual 1–5 integer scores for all 15 criteria and calculating overall score as the average.
+  - Endpoints:
+    - `POST /api/reviews`: Validates 1–5 range on all dimensions, stores attribute scores, and computes exact average rating.
+    - `GET /api/items/{item_id}/reviews`: Computes aggregate averages for all 5 Item criteria (`accuracy`, `condition`, `ease_of_use`, `instructions`, `value`) plus verified feedback list.
+  - UI Experience:
+    - `#review-modal`: Renders role-specific attribute dropdowns/selectors with real-time feedback.
+    - `#detail-modal`: Renders Airbnb-style horizontal criteria progress bars for all 5 item attributes alongside verified renter reviews!
+  - Tested 100% via `test_reviews.py`. All 12 test suites passing.

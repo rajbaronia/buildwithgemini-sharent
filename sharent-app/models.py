@@ -189,10 +189,31 @@ class RentalReview(Base):
     reviewee_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     item_id = Column(Integer, ForeignKey('items.id'), nullable=True)
     role = Column(String, nullable=False)  # renter_to_owner, owner_to_renter
-    rating = Column(Integer, nullable=False)  # 1 to 5
+    rating = Column(Float, nullable=False)  # 1.0 to 5.0 (calculated average of criteria)
     comment = Column(String, nullable=False)
     tags = Column(String, nullable=True)  # comma separated
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # 1. Item Rating Attributes (Rated by Renter)
+    item_accuracy = Column(Integer, nullable=True)          # 1 to 5
+    item_condition = Column(Integer, nullable=True)         # 1 to 5
+    item_ease_of_use = Column(Integer, nullable=True)       # 1 to 5
+    item_instructions = Column(Integer, nullable=True)      # 1 to 5
+    item_value = Column(Integer, nullable=True)             # 1 to 5
+
+    # 2. Owner Rating Attributes (Rated by Renter)
+    owner_response_time = Column(Integer, nullable=True)    # 1 to 5
+    owner_communication = Column(Integer, nullable=True)    # 1 to 5
+    owner_friendliness = Column(Integer, nullable=True)     # 1 to 5
+    owner_pickup_ease = Column(Integer, nullable=True)      # 1 to 5
+    owner_return_ease = Column(Integer, nullable=True)      # 1 to 5
+
+    # 3. Renter Rating Attributes (Rated by Owner)
+    renter_communication = Column(Integer, nullable=True)   # 1 to 5
+    renter_responsibility = Column(Integer, nullable=True)  # 1 to 5
+    renter_friendliness = Column(Integer, nullable=True)    # 1 to 5
+    renter_care_of_item = Column(Integer, nullable=True)    # 1 to 5
+    renter_return_condition = Column(Integer, nullable=True)# 1 to 5
 
     agreement = relationship('RentalAgreement')
     reviewer = relationship('User', foreign_keys=[reviewer_id])

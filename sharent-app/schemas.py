@@ -254,9 +254,29 @@ class RentalSummaryItem(BaseModel):
 class CreateReviewRequest(BaseModel):
     agreement_id: int
     reviewer_id: int
-    rating: int  # 1 to 5
     comment: str
     tags: Optional[List[str]] = None
+    
+    # 1. Item criteria (for Renter)
+    item_accuracy: Optional[int] = 5
+    item_condition: Optional[int] = 5
+    item_ease_of_use: Optional[int] = 5
+    item_instructions: Optional[int] = 5
+    item_value: Optional[int] = 5
+
+    # 2. Owner criteria (for Renter)
+    owner_response_time: Optional[int] = 5
+    owner_communication: Optional[int] = 5
+    owner_friendliness: Optional[int] = 5
+    owner_pickup_ease: Optional[int] = 5
+    owner_return_ease: Optional[int] = 5
+
+    # 3. Renter criteria (for Owner)
+    renter_communication: Optional[int] = 5
+    renter_responsibility: Optional[int] = 5
+    renter_friendliness: Optional[int] = 5
+    renter_care_of_item: Optional[int] = 5
+    renter_return_condition: Optional[int] = 5
 
 class ReviewResponse(BaseModel):
     id: int
@@ -264,13 +284,37 @@ class ReviewResponse(BaseModel):
     reviewer_name: str
     reviewee_name: str
     role: str
-    rating: int
+    rating: float
     comment: str
     tags: List[str]
     created_at: datetime
+    # Granular scores
+    item_accuracy: Optional[int] = None
+    item_condition: Optional[int] = None
+    item_ease_of_use: Optional[int] = None
+    item_instructions: Optional[int] = None
+    item_value: Optional[int] = None
+    owner_response_time: Optional[int] = None
+    owner_communication: Optional[int] = None
+    owner_friendliness: Optional[int] = None
+    owner_pickup_ease: Optional[int] = None
+    owner_return_ease: Optional[int] = None
+    renter_communication: Optional[int] = None
+    renter_responsibility: Optional[int] = None
+    renter_friendliness: Optional[int] = None
+    renter_care_of_item: Optional[int] = None
+    renter_return_condition: Optional[int] = None
+
+class ItemCriteriaBreakdown(BaseModel):
+    accuracy: float
+    condition: float
+    ease_of_use: float
+    instructions: float
+    value: float
 
 class ItemReviewSummaryResponse(BaseModel):
     item_id: int
     average_rating: float
     total_reviews: int
+    criteria_breakdown: ItemCriteriaBreakdown
     reviews: List[ReviewResponse]
