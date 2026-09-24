@@ -183,6 +183,8 @@ class RentalAgreementCreateRequest(BaseModel):
     accepted_terms: bool
     accepted_deposit_policy: bool
     accepted_safety_rules: bool
+    owner_custom_deposit: Optional[float] = None
+    owner_adjustment_notes: Optional[str] = None
 
 class RentalAgreementResponse(BaseModel):
     id: int
@@ -200,6 +202,8 @@ class RentalAgreementResponse(BaseModel):
     original_security_deposit: Optional[float] = None
     deposit_discount_pct: Optional[float] = 0.0
     deposit_evaluation_reason: Optional[str] = None
+    deposit_adjusted_by_owner: Optional[bool] = False
+    owner_adjustment_notes: Optional[str] = None
     service_fee: float
     insurance_fee: float
     total_amount: float
@@ -535,3 +539,10 @@ class NotificationSummaryResponse(BaseModel):
     total_notifications: int
     unread_count: int
     notifications: List[NotificationEventResponse]
+
+
+class OwnerDepositAdjustmentRequest(BaseModel):
+    owner_id: int
+    action: str  # "waive" or "reduce" or "custom"
+    new_deposit: Optional[float] = None
+    notes: Optional[str] = None

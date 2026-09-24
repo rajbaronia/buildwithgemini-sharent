@@ -875,6 +875,22 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
     original_security_deposit = deposit_eval["original_security_deposit"]
     deposit_discount_pct = deposit_eval["deposit_discount_pct"]
     deposit_evaluation_reason = deposit_eval["evaluation_reason"]
+    deposit_adjusted_by_owner = False
+    owner_adjustment_notes = payload.owner_adjustment_notes
+
+    # Manual Owner Discretion Override if specified on creation
+    if payload.owner_custom_deposit is not None:
+        custom_dep = max(0.0, round(float(payload.owner_custom_deposit), 2))
+        security_deposit = custom_dep
+        deposit_adjusted_by_owner = True
+        if original_security_deposit > 0:
+            deposit_discount_pct = round(max(0.0, (original_security_deposit - security_deposit) / original_security_deposit * 100), 1)
+        else:
+            deposit_discount_pct = 100.0 if security_deposit == 0 else 0.0
+        if security_deposit == 0:
+            deposit_evaluation_reason = f"Security Deposit manually waived by Owner ({owner_adjustment_notes or 'Special courtesy'})."
+        else:
+            deposit_evaluation_reason = f"Security Deposit manually adjusted by Owner to ${security_deposit:.2f} ({owner_adjustment_notes or 'Case-by-case agreement'})."
 
     total_amount = round(base_rent + service_fee + insurance_fee + security_deposit, 2)
 
@@ -892,6 +908,8 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
         original_security_deposit=original_security_deposit,
         deposit_discount_pct=deposit_discount_pct,
         deposit_evaluation_reason=deposit_evaluation_reason,
+        deposit_adjusted_by_owner=deposit_adjusted_by_owner,
+        owner_adjustment_notes=owner_adjustment_notes,
         service_fee=service_fee,
         insurance_fee=insurance_fee,
         total_amount=total_amount,
@@ -934,6 +952,8 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
         original_security_deposit=agreement.original_security_deposit,
         deposit_discount_pct=agreement.deposit_discount_pct,
         deposit_evaluation_reason=agreement.deposit_evaluation_reason,
+        deposit_adjusted_by_owner=agreement.deposit_adjusted_by_owner,
+        owner_adjustment_notes=agreement.owner_adjustment_notes,
         service_fee=agreement.service_fee,
         insurance_fee=agreement.insurance_fee,
         total_amount=agreement.total_amount,
@@ -941,6 +961,87 @@ def create_rental_agreement(payload: RentalAgreementCreateRequest, db: Session =
         agreed_at=agreement.agreed_at,
         status=agreement.status
     )
+
+
+
+from schemas import OwnerDepositAdjustmentRequest
+
+@app.post("/api/rental-agreements/{agreement_id}/adjust-deposit")
+def adjust_agreement_deposit_by_owner(
+    agreement_id: int,
+    payload: OwnerDepositAdjustmentRequest,
+    db: Session = Depends(get_db)
+):
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+
+    if agreement.owner_id != payload.owner_id:
+        raise HTTPException(status_code=403, detail="Only the listing Owner can adjust the security deposit for this rental agreement.")
+
+    if agreement.status != "pending_payment":
+        raise HTTPException(status_code=400, detail=f"Cannot adjust deposit for an agreement in '{agreement.status}' status. Only pending agreements can be adjusted before payment.")
+
+    orig_deposit = agreement.original_security_deposit if (agreement.original_security_deposit is not None) else agreement.security_deposit
+    
+    if payload.action == "waive":
+        new_deposit = 0.0
+        pct = 100.0
+        reason = f"Security Deposit 100% Waived by Owner ({payload.notes or 'Owner Discretion'})."
+    elif payload.action == "reduce":
+        # Default reduce: reduce by half or specified new_deposit
+        if payload.new_deposit is not None:
+            new_deposit = max(0.0, round(float(payload.new_deposit), 2))
+        else:
+            new_deposit = round(orig_deposit * 0.5, 2)
+        pct = round(max(0.0, (orig_deposit - new_deposit) / orig_deposit * 100), 1) if orig_deposit > 0 else 0.0
+        reason = f"Security Deposit manually reduced to ${new_deposit:.2f} by Owner ({payload.notes or 'Owner Discretion'})."
+    elif payload.action == "custom":
+        if payload.new_deposit is None:
+            raise HTTPException(status_code=400, detail="Must provide 'new_deposit' for custom adjustment.")
+        new_deposit = max(0.0, round(float(payload.new_deposit), 2))
+        pct = round(max(0.0, (orig_deposit - new_deposit) / orig_deposit * 100), 1) if orig_deposit > 0 else 0.0
+        reason = f"Security Deposit set to ${new_deposit:.2f} by Owner ({payload.notes or 'Special Terms'})."
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be 'waive', 'reduce', or 'custom'.")
+
+    # Update agreement
+    agreement.security_deposit = new_deposit
+    agreement.deposit_discount_pct = pct
+    agreement.deposit_evaluation_reason = reason
+    agreement.deposit_adjusted_by_owner = True
+    agreement.owner_adjustment_notes = payload.notes or ""
+    agreement.total_amount = round(agreement.base_rent + agreement.service_fee + agreement.insurance_fee + new_deposit, 2)
+
+    db.commit()
+    db.refresh(agreement)
+
+    # Notify renter about the deposit adjustment
+    renter = agreement.renter
+    item = agreement.item
+    item_title = item.title if item else "Equipment"
+    dispatch_notification(
+        db=db,
+        user=renter,
+        event_type="deposit_adjusted",
+        title=f"Deposit Adjusted for {item_title}!",
+        message=f"The Owner has adjusted your deposit to ${new_deposit:.2f} ({reason}). You may now complete your payment.",
+        channels=["push", "email", "sms"],
+        metadata_json={"agreement_id": agreement.id, "new_deposit": new_deposit}
+    )
+
+    return {
+        "message": "Security deposit successfully adjusted by Owner.",
+        "agreement_id": agreement.id,
+        "agreement_code": f"SHR-AGR-{agreement.id:05d}",
+        "security_deposit": agreement.security_deposit,
+        "original_security_deposit": orig_deposit,
+        "deposit_discount_pct": agreement.deposit_discount_pct,
+        "deposit_evaluation_reason": agreement.deposit_evaluation_reason,
+        "deposit_adjusted_by_owner": agreement.deposit_adjusted_by_owner,
+        "owner_adjustment_notes": agreement.owner_adjustment_notes,
+        "total_amount": agreement.total_amount
+    }
 
 
 import random
@@ -1275,6 +1376,8 @@ def get_user_rentals(user_id: int, role: str = "renter", db: Session = Depends(g
             "original_security_deposit": agr.original_security_deposit,
             "deposit_discount_pct": agr.deposit_discount_pct,
             "deposit_evaluation_reason": agr.deposit_evaluation_reason,
+            "deposit_adjusted_by_owner": agr.deposit_adjusted_by_owner,
+            "owner_adjustment_notes": agr.owner_adjustment_notes,
             "status": agr.status,
             "handover_pin": txn.handover_pin if txn else None,
             "deposit_refund_status": insp.deposit_refund_status if insp else None,

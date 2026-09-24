@@ -530,6 +530,24 @@ cd /config/Desktop/BuildWithGemini/sharent-app
    - Created test suite in [`test_owner_discretionary_deposit.py`](file:///config/Desktop/BuildWithGemini/sharent-app/test_owner_discretionary_deposit.py) covering newly registered users (full deposit), highly rated community users (50% reduction), and repeat trusted users (100% waiver).
    - **All 21 test suites passing 100%** (`21 passed in 31.03s`).
 
+
+### 22.2 Manual Case-by-Case Owner Deposit Discretion (Completed)
+- **Direct Owner Override Controls**:
+  - In addition to automated community rating & repeat-renter evaluations, the platform empowers Owners to manually adjust or waive the Security Deposit for any rental booking on a case-by-case basis.
+  - Actions supported:
+    1. **Waive (100% Off / $0.00 Deposit)**: Owner completely removes the deposit requirement (e.g. for a verified neighbor, colleague, or personal acquaintance).
+    2. **Cut Half (50% Off)**: Instantly reduces the deposit by half.
+    3. **Custom Deposit Amount ($)**: Owner can specify any custom deposit dollar value.
+- **Backend API & Data Model**:
+  - `POST /api/rental-agreements/{agreement_id}/adjust-deposit`: Endpoint authenticated for the item Owner to adjust the deposit before payment, recording `deposit_adjusted_by_owner=True` and `owner_adjustment_notes`.
+  - Automatically recalculates contract `total_amount` and dispatches immediate notification (Push, Email, SMS) to the Renter notifying them of the deposit modification.
+- **Dashboard UI / UX**:
+  - Added purple **Adjust Deposit** button on Owner's Rental Management dashboard for any agreement pending checkout.
+  - Interactive **Discretionary Deposit Adjustment Modal** allowing quick selection between Waive, 50% Reduction, or Custom Dollar amount with personal note.
+- **Automated Verification**:
+  - Extended [`test_owner_discretionary_deposit.py`](file:///config/Desktop/BuildWithGemini/sharent-app/test_owner_discretionary_deposit.py) with `test_owner_manual_deposit_adjustment_and_waiver` verifying permission protection, custom adjustment calculation, 100% waiver, and renter rental feed reflection.
+  - **All 22 test suites passed 100%** (`22 passed in 32.03s`).
+
 ## 7. Recommended Next Steps
 
 1. **In-App Messaging & Real-Time Chat (Module 14)**:

@@ -145,6 +145,8 @@ class RentalAgreement(Base):
     original_security_deposit = Column(Float, nullable=True)
     deposit_discount_pct = Column(Float, default=0.0)
     deposit_evaluation_reason = Column(String, nullable=True)
+    deposit_adjusted_by_owner = Column(Boolean, default=False)
+    owner_adjustment_notes = Column(String, nullable=True)
     agreed_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default='pending_payment')  # pending_payment, active, completed, cancelled
 
