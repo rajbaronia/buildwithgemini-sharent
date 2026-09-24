@@ -249,3 +249,28 @@ class RentalSummaryItem(BaseModel):
     handover_pin: Optional[str] = None
     deposit_refund_status: Optional[str] = None
     deposit_refunded_amount: Optional[float] = None
+
+
+class CreateReviewRequest(BaseModel):
+    agreement_id: int
+    reviewer_id: int
+    rating: int  # 1 to 5
+    comment: str
+    tags: Optional[List[str]] = None
+
+class ReviewResponse(BaseModel):
+    id: int
+    agreement_id: int
+    reviewer_name: str
+    reviewee_name: str
+    role: str
+    rating: int
+    comment: str
+    tags: List[str]
+    created_at: datetime
+
+class ItemReviewSummaryResponse(BaseModel):
+    item_id: int
+    average_rating: float
+    total_reviews: int
+    reviews: List[ReviewResponse]

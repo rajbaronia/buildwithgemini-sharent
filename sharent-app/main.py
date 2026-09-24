@@ -9,7 +9,7 @@ import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview
 from auth import (
     hash_password,
     verify_password,
@@ -41,6 +41,9 @@ from schemas import (
     HandoverVerificationRequest,
     ReturnInspectionRequest,
     RentalSummaryItem,
+    CreateReviewRequest,
+    ReviewResponse,
+    ItemReviewSummaryResponse,
 )
 
 app = FastAPI(title="SHARENT Marketplace")
@@ -869,7 +872,109 @@ def get_user_rentals(user_id: int, role: str = "renter", db: Session = Depends(g
             "status": agr.status,
             "handover_pin": txn.handover_pin if txn else None,
             "deposit_refund_status": insp.deposit_refund_status if insp else None,
-            "deposit_refunded_amount": insp.deposit_refunded_amount if insp else None
+            "deposit_refunded_amount": insp.deposit_refunded_amount if insp else None,
+            "has_reviewed": db.query(RentalReview).filter(RentalReview.agreement_id == agr.id, RentalReview.reviewer_id == user_id).first() is not None
         })
 
     return results
+
+
+@app.post("/api/reviews", response_model=ReviewResponse)
+def submit_rental_review(payload: CreateReviewRequest, db: Session = Depends(get_db)):
+    # 1. Fetch Agreement
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == payload.agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+    if agreement.status != "completed":
+        raise HTTPException(status_code=400, detail="Reviews can only be submitted after the rental has been completed and returned.")
+
+    # 2. Determine Role and Target Reviewee
+    if payload.reviewer_id == agreement.renter_id:
+        role = "renter_to_owner"
+        reviewee_id = agreement.owner_id
+    elif payload.reviewer_id == agreement.owner_id:
+        role = "owner_to_renter"
+        reviewee_id = agreement.renter_id
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized: Only the renter or owner of this agreement can submit a review.")
+
+    # 3. Check for Duplicate Review
+    existing = db.query(RentalReview).filter(
+        RentalReview.agreement_id == agreement.id,
+        RentalReview.reviewer_id == payload.reviewer_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already submitted a review for this rental.")
+
+    # 4. Validate Rating
+    if not (1 <= payload.rating <= 5):
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5 stars.")
+    if not payload.comment.strip():
+        raise HTTPException(status_code=400, detail="Please provide a comment sharing your feedback.")
+
+    tags_str = ",".join(payload.tags) if payload.tags else ""
+
+    # 5. Save Review
+    review = RentalReview(
+        agreement_id=agreement.id,
+        reviewer_id=payload.reviewer_id,
+        reviewee_id=reviewee_id,
+        item_id=agreement.item_id,
+        role=role,
+        rating=payload.rating,
+        comment=payload.comment.strip(),
+        tags=tags_str,
+        created_at=datetime.utcnow()
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+
+    reviewer = review.reviewer
+    reviewee = review.reviewee
+
+    return ReviewResponse(
+        id=review.id,
+        agreement_id=review.agreement_id,
+        reviewer_name=f"{reviewer.first_name} {reviewer.last_name}" if reviewer else "Member",
+        reviewee_name=f"{reviewee.first_name} {reviewee.last_name}" if reviewee else "Member",
+        role=review.role,
+        rating=review.rating,
+        comment=review.comment,
+        tags=review.tags.split(",") if review.tags else [],
+        created_at=review.created_at
+    )
+
+
+@app.get("/api/items/{item_id}/reviews", response_model=ItemReviewSummaryResponse)
+def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
+    # Fetch reviews of the item made by renters
+    reviews = db.query(RentalReview).filter(
+        RentalReview.item_id == item_id,
+        RentalReview.role == "renter_to_owner"
+    ).order_by(RentalReview.created_at.desc()).all()
+
+    rev_list = []
+    total_rating = 0
+    for r in reviews:
+        total_rating += r.rating
+        rev_list.append(ReviewResponse(
+            id=r.id,
+            agreement_id=r.agreement_id,
+            reviewer_name=f"{r.reviewer.first_name} {r.reviewer.last_name}" if r.reviewer else "Verified Renter",
+            reviewee_name=f"{r.reviewee.first_name} {r.reviewee.last_name}" if r.reviewee else "Verified Owner",
+            role=r.role,
+            rating=r.rating,
+            comment=r.comment,
+            tags=r.tags.split(",") if r.tags else [],
+            created_at=r.created_at
+        ))
+
+    avg = round(total_rating / len(reviews), 1) if reviews else 5.0
+
+    return ItemReviewSummaryResponse(
+        item_id=item_id,
+        average_rating=avg,
+        total_reviews=len(reviews),
+        reviews=rev_list
+    )

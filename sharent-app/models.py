@@ -178,3 +178,23 @@ class RentalHandoverInspection(Base):
     inspection_notes = Column(String, nullable=True)
 
     agreement = relationship('RentalAgreement')
+
+
+class RentalReview(Base):
+    __tablename__ = 'rental_reviews'
+
+    id = Column(Integer, primary_key=True, index=True)
+    agreement_id = Column(Integer, ForeignKey('rental_agreements.id'), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    reviewee_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    item_id = Column(Integer, ForeignKey('items.id'), nullable=True)
+    role = Column(String, nullable=False)  # renter_to_owner, owner_to_renter
+    rating = Column(Integer, nullable=False)  # 1 to 5
+    comment = Column(String, nullable=False)
+    tags = Column(String, nullable=True)  # comma separated
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    agreement = relationship('RentalAgreement')
+    reviewer = relationship('User', foreign_keys=[reviewer_id])
+    reviewee = relationship('User', foreign_keys=[reviewee_id])
+    item = relationship('Item')

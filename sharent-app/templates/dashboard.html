@@ -451,6 +451,78 @@
   
   
   
+  
+  <!-- ==================== MUTUAL RATING & REVIEW MODAL ==================== -->
+  <div id="review-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black text-slate-900">Leave a Review</h3>
+            <p class="text-xs text-slate-500">Rate your experience &amp; share feedback</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeReviewModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="event.preventDefault(); submitRentalReview();" class="mt-4 space-y-4">
+        <input type="hidden" id="rev-agreement-id">
+        
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+          <div class="flex justify-between"><span class="text-slate-400">Agreement:</span> <strong id="rev-agr-code" class="font-mono text-brand-700"></strong></div>
+          <div class="flex justify-between"><span class="text-slate-400">Reviewing:</span> <strong id="rev-target-name" class="text-slate-800"></strong></div>
+          <div class="flex justify-between"><span class="text-slate-400">Item:</span> <strong id="rev-item-title" class="text-slate-800"></strong></div>
+        </div>
+
+        <!-- Interactive 5-Star Rating -->
+        <div class="text-center py-2">
+          <label class="block text-xs font-bold text-slate-700 mb-2">Overall Star Rating</label>
+          <div id="star-rating-container" class="inline-flex space-x-2 text-2xl text-amber-400 cursor-pointer">
+            <i class="fa-solid fa-star" onclick="setReviewRating(1)"></i>
+            <i class="fa-solid fa-star" onclick="setReviewRating(2)"></i>
+            <i class="fa-solid fa-star" onclick="setReviewRating(3)"></i>
+            <i class="fa-solid fa-star" onclick="setReviewRating(4)"></i>
+            <i class="fa-solid fa-star" onclick="setReviewRating(5)"></i>
+          </div>
+          <input type="hidden" id="rev-rating-value" value="5">
+          <p id="rev-rating-label" class="text-xs font-bold text-amber-600 mt-1">5 Stars – Outstanding Experience</p>
+        </div>
+
+        <!-- Quick Compliment Tags -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Quick Compliments (Select all that apply)</label>
+          <div class="flex flex-wrap gap-1.5" id="rev-tags-container">
+            <button type="button" onclick="toggleReviewTag(this)" class="rev-tag px-2.5 py-1 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer">Clean &amp; Like New</button>
+            <button type="button" onclick="toggleReviewTag(this)" class="rev-tag px-2.5 py-1 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer">Smooth Handover</button>
+            <button type="button" onclick="toggleReviewTag(this)" class="rev-tag px-2.5 py-1 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer">Great Communication</button>
+            <button type="button" onclick="toggleReviewTag(this)" class="rev-tag px-2.5 py-1 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer">Punctual &amp; Reliable</button>
+            <button type="button" onclick="toggleReviewTag(this)" class="rev-tag px-2.5 py-1 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer">Treated with Care</button>
+          </div>
+        </div>
+
+        <!-- Written Feedback -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Your Written Review</label>
+          <textarea id="rev-comment" rows="3" required placeholder="Share details about the item's condition, performance, and communication..." class="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div id="rev-error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold"></div>
+
+        <div class="flex items-center justify-between gap-3 pt-2">
+          <button type="button" onclick="closeReviewModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer">Cancel</button>
+          <button type="submit" id="btn-submit-review" class="flex-1 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs cursor-pointer shadow-md shadow-amber-500/30">
+            Submit Verified Review
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ==================== OWNER HANDOVER PIN VERIFICATION MODAL ==================== -->
   <div id="handover-verify-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
@@ -2119,7 +2191,11 @@
             }
           } else if (r.status === 'completed') {
             statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800"><i class="fa-solid fa-circle-check mr-1"></i> Completed &amp; Refunded</span>';
-            actionBtn = '<span class="text-xs text-emerald-700 font-bold"><i class="fa-solid fa-check mr-1"></i> Escrow Released ($' + r.security_deposit.toFixed(2) + ')</span>';
+            var reviewBtn = r.has_reviewed ? 
+              '<span class="text-xs text-slate-400 font-semibold flex items-center"><i class="fa-solid fa-star text-amber-400 mr-1"></i> Reviewed</span>' :
+              '<button onclick="openReviewModal(' + r.agreement_id + ', \'' + r.agreement_code + '\', \'' + (currentRole === 'owner' ? r.renter_name.replace(/'/g, "\\'") : r.owner_name.replace(/'/g, "\\'")) + '\', \'' + r.item_title.replace(/'/g, "\\'") + '\')" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs cursor-pointer"><i class="fa-solid fa-star mr-1"></i> Leave Review</button>';
+
+            actionBtn = '<div class="flex items-center space-x-2"><span class="text-xs text-emerald-700 font-bold"><i class="fa-solid fa-check mr-1"></i> Escrow Released</span>' + reviewBtn + '</div>';
           }
 
           out += '<div class="p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white shadow-sm">';
@@ -2255,6 +2331,100 @@
 
     // Call loadUserRentals on page load
     setTimeout(loadUserRentals, 300);
+
+  
+    function setReviewRating(rating) {
+      document.getElementById('rev-rating-value').value = rating;
+      var stars = document.getElementById('star-rating-container').children;
+      for (var i = 0; i < 5; i++) {
+        if (i < rating) {
+          stars[i].className = 'fa-solid fa-star';
+        } else {
+          stars[i].className = 'fa-regular fa-star';
+        }
+      }
+      var labels = [
+        '1 Star – Poor Experience',
+        '2 Stars – Below Expectations',
+        '3 Stars – Average / Acceptable',
+        '4 Stars – Very Good',
+        '5 Stars – Outstanding Experience'
+      ];
+      document.getElementById('rev-rating-label').innerText = labels[rating - 1];
+    }
+
+    function toggleReviewTag(btn) {
+      if (btn.classList.contains('bg-amber-100')) {
+        btn.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        btn.classList.add('border-slate-200', 'text-slate-600');
+      } else {
+        btn.classList.add('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        btn.classList.remove('border-slate-200', 'text-slate-600');
+      }
+    }
+
+    function openReviewModal(agrId, agrCode, targetName, itemTitle) {
+      document.getElementById('rev-agreement-id').value = agrId;
+      document.getElementById('rev-agr-code').innerText = agrCode;
+      document.getElementById('rev-target-name').innerText = targetName;
+      document.getElementById('rev-item-title').innerText = itemTitle;
+      document.getElementById('rev-comment').value = '';
+      setReviewRating(5);
+      document.querySelectorAll('.rev-tag').forEach(function(b) {
+        b.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        b.classList.add('border-slate-200', 'text-slate-600');
+      });
+      document.getElementById('rev-error-box').classList.add('hidden');
+      document.getElementById('review-modal').classList.remove('hidden');
+    }
+
+    function closeReviewModal() {
+      document.getElementById('review-modal').classList.add('hidden');
+    }
+
+    async function submitRentalReview() {
+      var agrId = parseInt(document.getElementById('rev-agreement-id').value);
+      var rating = parseInt(document.getElementById('rev-rating-value').value);
+      var comment = document.getElementById('rev-comment').value.trim();
+      var btn = document.getElementById('btn-submit-review');
+      var errBox = document.getElementById('rev-error-box');
+
+      var selectedTags = [];
+      document.querySelectorAll('.rev-tag.bg-amber-100').forEach(function(b) {
+        selectedTags.push(b.innerText.trim());
+      });
+
+      try {
+        btn.disabled = true;
+        btn.innerText = 'Submitting Review...';
+        errBox.classList.add('hidden');
+
+        var res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            agreement_id: agrId,
+            reviewer_id: currentUserId,
+            rating: rating,
+            comment: comment,
+            tags: selectedTags
+          })
+        });
+
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Review submission failed');
+
+        alert('Thank you! Your verified review has been published.');
+        closeReviewModal();
+        loadUserRentals();
+      } catch (err) {
+        errBox.innerText = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Submit Verified Review';
+      }
+    }
 
   </script>
 </body>

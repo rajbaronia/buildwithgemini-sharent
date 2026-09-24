@@ -224,3 +224,17 @@ When continuing development on this or another device, the recommended logical p
 ## 11. Module 11: Mutual Rating & Review System (Next Module)
 - **Status**: Under active implementation.
 - **Objectives**: Enable Renters to review items and owners (item accuracy, condition, communication) and Owners to review renters (punctuality, item care), calculating average star ratings and displaying verified feedback across the marketplace.
+
+---
+
+## 12. Module 11: Mutual Rating & Review System (Completed)
+- **Requirements**: Enable verified Renters and Owners to review and rate each other (1 to 5 stars) once a rental transaction has reached `completed` status; calculate real-time average star ratings, review counts, and display tag badges (e.g. `Clean & Like New`, `Great Communication`, `Punctual`).
+- **Implementation**:
+  - `RentalReview` model recording: `agreement_id`, `reviewer_id`, `reviewee_id`, `item_id`, `role` (`renter_to_owner` vs `owner_to_renter`), `rating`, `comment`, `tags`, and `created_at`.
+  - Endpoints:
+    - `POST /api/reviews`: Validates agreement is completed, verifies role authorization, enforces duplicate prevention, and saves review.
+    - `GET /api/items/{item_id}/reviews`: Calculates aggregate average star rating, total review count, and provides verified review feedback list.
+  - UI Modal & Enhancements:
+    - `#review-modal`: Interactive 5-star rating selector, 1-click compliment tag chips, and feedback text area.
+    - Rental Activity cards dynamically display **`Leave Review ★`** or `Reviewed ★` checkmark once completed.
+  - Tested 100% via `test_reviews.py`. All 12 test suites passing.
