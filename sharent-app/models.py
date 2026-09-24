@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Float, Text, create_engine
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Float, Text, JSON, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 import json
 
@@ -308,3 +308,28 @@ class WalletTransaction(Base):
     wallet = relationship('UserWallet')
     user = relationship('User')
     agreement = relationship('RentalAgreement')
+
+
+class DisputeClaim(Base):
+    __tablename__ = 'dispute_claims'
+
+    id = Column(Integer, primary_key=True, index=True)
+    agreement_id = Column(Integer, ForeignKey('rental_agreements.id'), nullable=False)
+    claimant_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    respondent_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    claim_type = Column(String(50), nullable=False)  # damage, late_return, missing_parts, not_working, other
+    requested_amount = Column(Float, nullable=False)
+    status = Column(String(30), default="open", nullable=False)  # open, under_review, resolved_approved, resolved_rejected, resolved_split, cancelled
+    claimant_description = Column(Text, nullable=False)
+    respondent_response = Column(Text, nullable=True)
+    photos = Column(JSON, default=list)  # list of image URLs
+    respondent_photos = Column(JSON, default=list)
+    admin_notes = Column(Text, nullable=True)
+    settled_amount_to_owner = Column(Float, default=0.0)
+    settled_amount_refunded_to_renter = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+
+    agreement = relationship('RentalAgreement', backref='disputes')
+    claimant = relationship('User', foreign_keys=[claimant_id])
+    respondent = relationship('User', foreign_keys=[respondent_id])

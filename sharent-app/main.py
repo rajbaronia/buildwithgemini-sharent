@@ -4,12 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 import os
 import uuid
 import json
 
-from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker, UserReferral
+from models import init_db, get_db, User, Item, OTPVerification, ItemAvailability, RentalAgreement, PaymentTransaction, RentalHandoverInspection, RentalReview, UserWallet, WalletTransaction, PromotionalProgramConfig, UserBonusTracker, UserReferral, DisputeClaim
 from auth import (
     hash_password,
     verify_password,
@@ -55,6 +55,10 @@ from schemas import (
     UserBonusProgressResponse,
     MyReferralCodeResponse,
     ReferralItemResponse,
+    DisputeClaimCreateRequest,
+    DisputeResponseRequest,
+    AdminDisputeResolveRequest,
+    DisputeClaimResponse,
 )
 
 
@@ -1375,6 +1379,307 @@ def get_item_reviews(item_id: int, db: Session = Depends(get_db)):
     )
 
 
+
+
+
+# ---------------------------------------------------------------------------
+# Module 18: Dispute & Damage Claims Management
+# ---------------------------------------------------------------------------
+
+@app.post("/api/disputes", response_model=DisputeClaimResponse)
+def file_dispute_claim(payload: DisputeClaimCreateRequest, db: Session = Depends(get_db)):
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == payload.agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+
+    claimant = db.query(User).filter(User.id == payload.claimant_id).first()
+    if not claimant:
+        raise HTTPException(status_code=404, detail="Claimant not found.")
+
+    if payload.claimant_id not in [agreement.renter_id, agreement.owner_id]:
+        raise HTTPException(status_code=403, detail="Only parties to the rental agreement can file a dispute.")
+
+    respondent_id = agreement.owner_id if payload.claimant_id == agreement.renter_id else agreement.renter_id
+    respondent = db.query(User).filter(User.id == respondent_id).first()
+
+    if payload.requested_amount <= 0:
+        raise HTTPException(status_code=400, detail="Requested claim amount must be greater than $0.00.")
+
+    # Freeze any active security deposit hold on this agreement
+    deposit_hold = db.query(PaymentTransaction).filter(
+        PaymentTransaction.agreement_id == agreement.id
+    ).first()
+
+    if deposit_hold:
+        deposit_hold.payment_status = "disputed_freeze"
+
+    claim = DisputeClaim(
+        agreement_id=payload.agreement_id,
+        claimant_id=payload.claimant_id,
+        respondent_id=respondent_id,
+        claim_type=payload.claim_type,
+        requested_amount=round(payload.requested_amount, 2),
+        status="open",
+        claimant_description=payload.claimant_description,
+        photos=payload.photos or [],
+        respondent_photos=[],
+        created_at=datetime.utcnow()
+    )
+    db.add(claim)
+    db.commit()
+    db.refresh(claim)
+
+    return DisputeClaimResponse(
+        id=claim.id,
+        agreement_id=claim.agreement_id,
+        claimant_id=claim.claimant_id,
+        claimant_name=f"{claimant.first_name} {claimant.last_name}",
+        respondent_id=claim.respondent_id,
+        respondent_name=f"{respondent.first_name} {respondent.last_name}",
+        claim_type=claim.claim_type,
+        requested_amount=claim.requested_amount,
+        status=claim.status,
+        claimant_description=claim.claimant_description,
+        respondent_response=claim.respondent_response,
+        photos=claim.photos or [],
+        respondent_photos=claim.respondent_photos or [],
+        admin_notes=claim.admin_notes,
+        settled_amount_to_owner=claim.settled_amount_to_owner,
+        settled_amount_refunded_to_renter=claim.settled_amount_refunded_to_renter,
+        created_at=claim.created_at,
+        resolved_at=claim.resolved_at
+    )
+
+@app.get("/api/disputes/agreement/{agreement_id}", response_model=List[DisputeClaimResponse])
+def get_disputes_for_agreement(agreement_id: int, db: Session = Depends(get_db)):
+    claims = db.query(DisputeClaim).filter(DisputeClaim.agreement_id == agreement_id).order_by(DisputeClaim.created_at.desc()).all()
+    results = []
+    for c in claims:
+        results.append(DisputeClaimResponse(
+            id=c.id,
+            agreement_id=c.agreement_id,
+            claimant_id=c.claimant_id,
+            claimant_name=f"{c.claimant.first_name} {c.claimant.last_name}" if c.claimant else "Claimant",
+            respondent_id=c.respondent_id,
+            respondent_name=f"{c.respondent.first_name} {c.respondent.last_name}" if c.respondent else "Respondent",
+            claim_type=c.claim_type,
+            requested_amount=c.requested_amount,
+            status=c.status,
+            claimant_description=c.claimant_description,
+            respondent_response=c.respondent_response,
+            photos=c.photos or [],
+            respondent_photos=c.respondent_photos or [],
+            admin_notes=c.admin_notes,
+            settled_amount_to_owner=c.settled_amount_to_owner,
+            settled_amount_refunded_to_renter=c.settled_amount_refunded_to_renter,
+            created_at=c.created_at,
+            resolved_at=c.resolved_at
+        ))
+    return results
+
+@app.get("/api/disputes/{claim_id}", response_model=DisputeClaimResponse)
+def get_dispute_by_id(claim_id: int, db: Session = Depends(get_db)):
+    c = db.query(DisputeClaim).filter(DisputeClaim.id == claim_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Dispute claim not found.")
+
+    return DisputeClaimResponse(
+        id=c.id,
+        agreement_id=c.agreement_id,
+        claimant_id=c.claimant_id,
+        claimant_name=f"{c.claimant.first_name} {c.claimant.last_name}" if c.claimant else "Claimant",
+        respondent_id=c.respondent_id,
+        respondent_name=f"{c.respondent.first_name} {c.respondent.last_name}" if c.respondent else "Respondent",
+        claim_type=c.claim_type,
+        requested_amount=c.requested_amount,
+        status=c.status,
+        claimant_description=c.claimant_description,
+        respondent_response=c.respondent_response,
+        photos=c.photos or [],
+        respondent_photos=c.respondent_photos or [],
+        admin_notes=c.admin_notes,
+        settled_amount_to_owner=c.settled_amount_to_owner,
+        settled_amount_refunded_to_renter=c.settled_amount_refunded_to_renter,
+        created_at=c.created_at,
+        resolved_at=c.resolved_at
+    )
+
+@app.post("/api/disputes/{claim_id}/respond", response_model=DisputeClaimResponse)
+def respond_to_dispute(claim_id: int, payload: DisputeResponseRequest, db: Session = Depends(get_db)):
+    claim = db.query(DisputeClaim).filter(DisputeClaim.id == claim_id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Dispute claim not found.")
+
+    if payload.respondent_id != claim.respondent_id:
+        raise HTTPException(status_code=403, detail="Only the designated respondent can submit a rebuttal.")
+
+    claim.respondent_response = payload.respondent_response
+    if payload.photos:
+        current_photos = list(claim.respondent_photos or [])
+        current_photos.extend(payload.photos)
+        claim.respondent_photos = current_photos
+
+    claim.status = "under_review"
+    db.commit()
+    db.refresh(claim)
+
+    return DisputeClaimResponse(
+        id=claim.id,
+        agreement_id=claim.agreement_id,
+        claimant_id=claim.claimant_id,
+        claimant_name=f"{claim.claimant.first_name} {claim.claimant.last_name}" if claim.claimant else "Claimant",
+        respondent_id=claim.respondent_id,
+        respondent_name=f"{claim.respondent.first_name} {claim.respondent.last_name}" if claim.respondent else "Respondent",
+        claim_type=claim.claim_type,
+        requested_amount=claim.requested_amount,
+        status=claim.status,
+        claimant_description=claim.claimant_description,
+        respondent_response=claim.respondent_response,
+        photos=claim.photos or [],
+        respondent_photos=claim.respondent_photos or [],
+        admin_notes=claim.admin_notes,
+        settled_amount_to_owner=claim.settled_amount_to_owner,
+        settled_amount_refunded_to_renter=claim.settled_amount_refunded_to_renter,
+        created_at=claim.created_at,
+        resolved_at=claim.resolved_at
+    )
+
+@app.get("/api/admin/disputes", response_model=List[DisputeClaimResponse])
+def list_all_disputes(status: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(DisputeClaim)
+    if status:
+        query = query.filter(DisputeClaim.status == status)
+    claims = query.order_by(DisputeClaim.created_at.desc()).all()
+
+    results = []
+    for c in claims:
+        results.append(DisputeClaimResponse(
+            id=c.id,
+            agreement_id=c.agreement_id,
+            claimant_id=c.claimant_id,
+            claimant_name=f"{c.claimant.first_name} {c.claimant.last_name}" if c.claimant else "Claimant",
+            respondent_id=c.respondent_id,
+            respondent_name=f"{c.respondent.first_name} {c.respondent.last_name}" if c.respondent else "Respondent",
+            claim_type=c.claim_type,
+            requested_amount=c.requested_amount,
+            status=c.status,
+            claimant_description=c.claimant_description,
+            respondent_response=c.respondent_response,
+            photos=c.photos or [],
+            respondent_photos=c.respondent_photos or [],
+            admin_notes=c.admin_notes,
+            settled_amount_to_owner=c.settled_amount_to_owner,
+            settled_amount_refunded_to_renter=c.settled_amount_refunded_to_renter,
+            created_at=c.created_at,
+            resolved_at=c.resolved_at
+        ))
+    return results
+
+@app.post("/api/admin/disputes/{claim_id}/resolve", response_model=DisputeClaimResponse)
+def admin_resolve_dispute(claim_id: int, payload: AdminDisputeResolveRequest, db: Session = Depends(get_db)):
+    claim = db.query(DisputeClaim).filter(DisputeClaim.id == claim_id).first()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Dispute claim not found.")
+
+    agreement = db.query(RentalAgreement).filter(RentalAgreement.id == claim.agreement_id).first()
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Rental agreement not found.")
+
+    deposit_amount = agreement.security_deposit
+
+    deposit_tx = db.query(PaymentTransaction).filter(
+        PaymentTransaction.agreement_id == agreement.id
+    ).first()
+
+    award_owner = 0.0
+    refund_renter = deposit_amount
+
+    if payload.decision in ["approve_full", "approve_partial"]:
+        if payload.decision == "approve_full":
+            award_owner = min(claim.requested_amount, deposit_amount)
+        else:
+            award_owner = min(payload.approved_amount_to_owner, deposit_amount)
+
+        refund_renter = max(round(deposit_amount - award_owner, 2), 0.0)
+        claim.status = "resolved_approved" if award_owner == claim.requested_amount else "resolved_split"
+
+        # Disburse cash to Owner's wallet for the approved damage amount
+        if award_owner > 0:
+            owner_wallet = get_or_create_user_wallet(agreement.owner_id, db)
+            owner_wallet.withdrawable_cash_balance = round(owner_wallet.withdrawable_cash_balance + award_owner, 2)
+            db.add(WalletTransaction(
+                wallet_id=owner_wallet.id,
+                user_id=agreement.owner_id,
+                transaction_type="dispute_payout",
+                balance_type="withdrawable_cash",
+                amount=award_owner,
+                description=f"Dispute claim settlement payout for agreement #{agreement.id} ({claim.claim_type})",
+                created_at=datetime.utcnow()
+            ))
+
+        # Disburse remainder refund to Renter's wallet
+        if refund_renter > 0:
+            renter_wallet = get_or_create_user_wallet(agreement.renter_id, db)
+            renter_wallet.withdrawable_cash_balance = round(renter_wallet.withdrawable_cash_balance + refund_renter, 2)
+            db.add(WalletTransaction(
+                wallet_id=renter_wallet.id,
+                user_id=agreement.renter_id,
+                transaction_type="deposit_refund",
+                balance_type="withdrawable_cash",
+                amount=refund_renter,
+                description=f"Security deposit balance refund after dispute resolution for agreement #{agreement.id}",
+                created_at=datetime.utcnow()
+            ))
+
+    elif payload.decision == "reject":
+        claim.status = "resolved_rejected"
+        award_owner = 0.0
+        refund_renter = deposit_amount
+
+        # 100% refund of deposit to Renter
+        renter_wallet = get_or_create_user_wallet(agreement.renter_id, db)
+        renter_wallet.withdrawable_cash_balance = round(renter_wallet.withdrawable_cash_balance + refund_renter, 2)
+        db.add(WalletTransaction(
+            wallet_id=renter_wallet.id,
+            user_id=agreement.renter_id,
+            transaction_type="deposit_refund",
+            balance_type="withdrawable_cash",
+            amount=refund_renter,
+            description=f"Full security deposit refund: dispute claim rejected for agreement #{agreement.id}",
+            created_at=datetime.utcnow()
+        ))
+
+    claim.settled_amount_to_owner = round(award_owner, 2)
+    claim.settled_amount_refunded_to_renter = round(refund_renter, 2)
+    claim.admin_notes = payload.admin_notes
+    claim.resolved_at = datetime.utcnow()
+
+    if deposit_tx:
+        deposit_tx.payment_status = f"settled_{claim.status}"
+
+    db.commit()
+    db.refresh(claim)
+
+    return DisputeClaimResponse(
+        id=claim.id,
+        agreement_id=claim.agreement_id,
+        claimant_id=claim.claimant_id,
+        claimant_name=f"{claim.claimant.first_name} {claim.claimant.last_name}" if claim.claimant else "Claimant",
+        respondent_id=claim.respondent_id,
+        respondent_name=f"{claim.respondent.first_name} {claim.respondent.last_name}" if claim.respondent else "Respondent",
+        claim_type=claim.claim_type,
+        requested_amount=claim.requested_amount,
+        status=claim.status,
+        claimant_description=claim.claimant_description,
+        respondent_response=claim.respondent_response,
+        photos=claim.photos or [],
+        respondent_photos=claim.respondent_photos or [],
+        admin_notes=claim.admin_notes,
+        settled_amount_to_owner=claim.settled_amount_to_owner,
+        settled_amount_refunded_to_renter=claim.settled_amount_refunded_to_renter,
+        created_at=claim.created_at,
+        resolved_at=claim.resolved_at
+    )
 
 
 @app.get("/api/referrals/my-code/{user_id}", response_model=MyReferralCodeResponse)

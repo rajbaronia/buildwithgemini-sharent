@@ -3199,6 +3199,61 @@
     }
 
     
+    
+    function openDisputeModal(agreementId) {
+      document.getElementById('dispute-agreement-id').value = agreementId;
+      document.getElementById('dispute-claimant-id').value = currentUserId;
+      document.getElementById('dispute-modal').classList.remove('hidden');
+    }
+
+    function closeDisputeModal() {
+      document.getElementById('dispute-modal').classList.add('hidden');
+    }
+
+    function submitDisputeClaim(e) {
+      e.preventDefault();
+      var agrId = parseInt(document.getElementById('dispute-agreement-id').value);
+      var claimantId = parseInt(document.getElementById('dispute-claimant-id').value);
+      var claimType = document.getElementById('dispute-claim-type').value;
+      var amount = parseFloat(document.getElementById('dispute-amount').value);
+      var desc = document.getElementById('dispute-description').value;
+      var photosRaw = document.getElementById('dispute-photo-urls').value;
+      var photos = photosRaw ? photosRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+
+      var btn = document.getElementById('submit-dispute-btn');
+      btn.disabled = true;
+      btn.innerText = 'Submitting Claim...';
+
+      fetch('/api/disputes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agreement_id: agrId,
+          claimant_id: claimantId,
+          claim_type: claimType,
+          requested_amount: amount,
+          claimant_description: desc,
+          photos: photos
+        })
+      })
+      .then(function(res) {
+        if (!res.ok) return res.json().then(function(err) { throw new Error(err.detail || 'Failed to file claim'); });
+        return res.json();
+      })
+      .then(function(data) {
+        alert('Dispute claim #' + data.id + ' filed successfully! Security deposit has been frozen in escrow pending review.');
+        closeDisputeModal();
+        location.reload();
+      })
+      .catch(function(err) {
+        alert('Error filing dispute: ' + err.message);
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-gavel"></i><span>Submit Dispute & Freeze Deposit Escrow</span>';
+      });
+    }
+
     function openReferralModal() {
       document.getElementById('referral-modal').classList.remove('hidden');
       loadReferralDetails();

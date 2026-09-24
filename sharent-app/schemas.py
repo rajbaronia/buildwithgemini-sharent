@@ -425,3 +425,42 @@ class MyReferralCodeResponse(BaseModel):
     total_referral_earnings: float
     share_links: dict
     referrals: List[ReferralItemResponse]
+
+
+class DisputeClaimCreateRequest(BaseModel):
+    agreement_id: int
+    claimant_id: int
+    claim_type: str  # damage, late_return, missing_parts, not_working, other
+    requested_amount: float
+    claimant_description: str
+    photos: Optional[List[str]] = Field(default_factory=list)
+
+class DisputeResponseRequest(BaseModel):
+    respondent_id: int
+    respondent_response: str
+    photos: Optional[List[str]] = Field(default_factory=list)
+
+class AdminDisputeResolveRequest(BaseModel):
+    decision: str  # approve_full, approve_partial, reject
+    approved_amount_to_owner: float = 0.0
+    admin_notes: Optional[str] = None
+
+class DisputeClaimResponse(BaseModel):
+    id: int
+    agreement_id: int
+    claimant_id: int
+    claimant_name: str
+    respondent_id: int
+    respondent_name: str
+    claim_type: str
+    requested_amount: float
+    status: str
+    claimant_description: str
+    respondent_response: Optional[str] = None
+    photos: List[str]
+    respondent_photos: List[str]
+    admin_notes: Optional[str] = None
+    settled_amount_to_owner: float
+    settled_amount_refunded_to_renter: float
+    created_at: datetime
+    resolved_at: Optional[datetime] = None

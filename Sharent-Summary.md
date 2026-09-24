@@ -342,6 +342,23 @@ rental_reviews (Airbnb-Style Multi-Criteria)
   - Added **"Invite & Earn $15"** navigation button and full modal with live counters (*Friends Invited*, *Pending Listings*, *Total Earned*), and an activity feed of invited friends.
   - Added **Referral Code (Optional)** input in registration form with auto-fill from `?ref=...` URL parameter.
 
+### Module 18: Dispute & Damage Claims Management
+- **Structured Dispute & Damage Claim Architecture**:
+  - Allows either party (Owner or Renter) to file a formal dispute claim during or after return inspection.
+  - Supports granular claim categorization: Physical Item Damage, Missing Parts/Accessories, Late Return, Not Working/Defective, or Other Violations.
+  - Captures claim requested amount, detailed narrative, and photographic evidence URLs.
+- **Deposit Escrow Freezing**:
+  - Automatically flags and freezes the rental's security deposit transaction (`PaymentTransaction.payment_status = "disputed_freeze"`), preventing automatic release while adjudication is ongoing.
+- **Respondent Rebuttal Workflow**:
+  - Designated respondent can submit a formal response/rebuttal along with their own counter-evidence photos (`POST /api/disputes/{claim_id}/respond`), transitioning claim status to `under_review`.
+- **Administrative Adjudication & Automated Disbursals (`POST /api/admin/disputes/{claim_id}/resolve`)**:
+  - Full, partial, or split settlements:
+    - **Approved damage settlement** is automatically credited as withdrawable cash to the Owner's wallet with audit type `dispute_payout`.
+    - **Remaining deposit balance** is automatically refunded as withdrawable cash to the Renter's wallet with audit type `deposit_refund`.
+    - **Rejection** releases 100% of the deposit back to the Renter's wallet.
+- **Interactive UI & Dispute Modal**:
+  - Styled modal on the dashboard with category selectors, claim amount validation, narrative descriptions, and photo evidence URL inputs.
+
 ## 5. Automated Testing Suite
 
 All 12 Pytest test suites are passing with 100% success rate:
@@ -390,6 +407,13 @@ cd /config/Desktop/BuildWithGemini/sharent-app
     - Verifies invitee registration linking and pending referral tracking.
     - Tests incremental listing: 1 to 9 items keeps referral pending; 10th qualifying item triggers dual bonus payout (Invitee gets $20 sign-up bonus, Referrer automatically receives $15 referral bonus).
     - Tests dynamic administrative threshold adjustment ($25 referrer bonus, $30 invitee bonus, 2 items threshold) and subsequent qualification.
+
+17. `test_dispute_claims.py`:
+    - Tests complete rental checkout and escrow deposit hold ($100).
+    - Verifies dispute claim filing with photographic damage evidence, freezing escrow hold to `disputed_freeze`.
+    - Tests respondent rebuttal submission and status transition to `under_review`.
+    - Tests administrative split resolution: $50 damage settlement awarded to Owner, $50 deposit balance refunded to Renter.
+    - Validates exact accounting in both wallets and wallet transaction audit ledger entries.
 
 ## 6. How to Run Locally
 
